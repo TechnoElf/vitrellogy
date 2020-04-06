@@ -1,0 +1,13 @@
+[package]
+name = "vitrellogy"
+version = "0.1.0"
+authors = ["TechnoElf <jhjavadev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+num-traits = "0.2.11"
+
+[dependencies.sdl2]
+version = "0.33.0"
+default-features = false
+features = ["image"]
