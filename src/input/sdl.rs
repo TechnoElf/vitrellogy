@@ -1,75 +1,43 @@
-use std::collections::*;
-use std::f32::consts::*;
-
 use sdl2::*;
 use sdl2::event::*;
 use sdl2::keyboard::*;
 
-use crate::input::*;
-use crate::misc::vec::*;
+use crate::input::Input;
+use crate::input::key::{KeysRes, Key};
+use crate::misc::{AppStateRes, AppState};
+use crate::misc::vec::Vec2;
+use crate::render::CameraRes;
 
 struct SDLContext {
     events: EventPump,
 }
 
 pub struct SDLInput {
-    keys: Keys,
-    win_dim: Vec2<u32>,
-    movement: Vec2<f32>,
     context: SDLContext
 }
 
 impl Input for SDLInput {
-    fn input(&mut self) -> InputState {
+    fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes) {
         for event in self.context.events.poll_iter() {
             match event {
-                Event::Quit {..} => return InputState::Stopping,
+                Event::Quit {..} => state.0 = AppState::Stopping,
                 Event::Window { win_event: e, .. } => {
                     match e {
-                        WindowEvent::Resized(w, h) => self.win_dim = Vec2::new(w as u32, h as u32),
+                        WindowEvent::Resized(w, h) => camera.screen = Vec2::new(w as u32, h as u32),
                         _ => {}
                     }
                 },
-                Event::KeyDown { keycode: Some(k), .. } => self.keys.press(k),
-                Event::KeyUp { keycode: Some(k), .. } => self.keys.release(k),
+                Event::KeyDown { keycode: Some(k), .. } => keys.press(SDLInput::sdl_to_key(k)),
+                Event::KeyUp { keycode: Some(k), .. } => keys.release(SDLInput::sdl_to_key(k)),
                 Event::MouseButtonUp { x, y, .. } => println!("Click at ({}, {})", x, y),
                 _ => {}
             }
         }
-
-        self.movement = match (self.keys.pressed(Keycode::W), self.keys.pressed(Keycode::S), self.keys.pressed(Keycode::D), self.keys.pressed(Keycode::A)) {
-            (true, true, true, true) => Vec2::new(0.0, 0.0),
-            (true, true, true, false) => Vec2::new(1.0, 0.0),
-            (true, true, false, true) => Vec2::new(-1.0, 0.0),
-            (true, true, false, false) => Vec2::new(0.0, 0.0),
-            (true, false, true, true) => Vec2::new(0.0, 1.0),
-            (true, false, true, false) => Vec2::new(FRAC_1_SQRT_2, FRAC_1_SQRT_2),
-            (true, false, false, true) => Vec2::new(-FRAC_1_SQRT_2, FRAC_1_SQRT_2),
-            (true, false, false, false) => Vec2::new(0.0, 1.0),
-            (false, true, true, true) => Vec2::new(0.0, -1.0),
-            (false, true, true, false) => Vec2::new(FRAC_1_SQRT_2, -FRAC_1_SQRT_2),
-            (false, true, false, true) => Vec2::new(-FRAC_1_SQRT_2, -FRAC_1_SQRT_2),
-            (false, true, false, false) => Vec2::new(0.0, -1.0),
-            (false, false, true, true) => Vec2::new(0.0, 0.0),
-            (false, false, true, false) => Vec2::new(1.0, 0.0),
-            (false, false, false, true) => Vec2::new(-1.0, 0.0),
-            (false, false, false, false) => Vec2::new(0.0, 0.0)
-        };
-
-        InputState::Running
-    }
-
-    fn get_win_dim(&self) -> Vec2<u32> {
-        self.win_dim
-    }
-
-    fn get_movement(&self) -> Vec2<f32> {
-        self.movement
     }
 }
 
 impl SDLInput {
-    pub fn init(sdl_context: &Sdl, win_dim: Vec2<u32>) -> SDLInput {
+    pub fn init(sdl_context: &Sdl) -> SDLInput {
         let events = sdl_context.event_pump().unwrap();
 
         let context = SDLContext {
@@ -77,37 +45,39 @@ impl SDLInput {
         };
 
         SDLInput {
-            keys: Keys::new(),
-            movement: Vec2::new(0.0, 0.0),
-            win_dim: win_dim,
             context: context
         }
     }
-}
 
-struct Keys {
-    keys: HashMap<Keycode, bool>
-}
-
-impl Keys {
-    fn new() -> Self {
-        Keys {
-            keys: HashMap::new()
-        }
-    }
-
-    fn press(&mut self, key: Keycode) {
-        self.keys.insert(key, true);
-    }
-
-    fn release(&mut self, key: Keycode) {
-        self.keys.insert(key, false);
-    }
-
-    fn pressed(&self, key: Keycode) -> bool {
-        match self.keys.contains_key(&key) {
-            true => self.keys[&key],
-            false => false
+    fn sdl_to_key(k: Keycode) -> Key {
+        match k {
+            Keycode::A => Key::A,
+            Keycode::B => Key::B,
+            Keycode::C => Key::C,
+            Keycode::D => Key::D,
+            Keycode::E => Key::E,
+            Keycode::F => Key::F,
+            Keycode::G => Key::G,
+            Keycode::H => Key::H,
+            Keycode::I => Key::I,
+            Keycode::J => Key::J,
+            Keycode::K => Key::K,
+            Keycode::L => Key::L,
+            Keycode::M => Key::M,
+            Keycode::N => Key::N,
+            Keycode::O => Key::O,
+            Keycode::P => Key::P,
+            Keycode::Q => Key::Q,
+            Keycode::R => Key::R,
+            Keycode::S => Key::S,
+            Keycode::T => Key::T,
+            Keycode::U => Key::U,
+            Keycode::V => Key::V,
+            Keycode::W => Key::W,
+            Keycode::X => Key::X,
+            Keycode::Y => Key::Y,
+            Keycode::Z => Key::Z,
+            _ => Key::Q
         }
     }
 }
