@@ -1,10 +1,12 @@
 use specs::{prelude::*, Component};
 use std::f32::consts::FRAC_1_SQRT_2;
+use vitrellogy_macro::DefaultConstructor;
 
 use crate::misc::vec::Vec2;
 use crate::physics::{TransformCom, DeltaTimeRes};
 use crate::input::key::{KeysRes, Key};
 
+#[derive(DefaultConstructor)]
 pub struct ControllerSys;
 
 impl<'a> System<'a> for ControllerSys {
@@ -42,18 +44,6 @@ impl<'a> System<'a> for ControllerSys {
     }
 }
 
-impl ControllerSys {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-#[derive(Component, Debug)]
+#[derive(Component, Debug, DefaultConstructor)]
 #[storage(VecStorage)]
 pub struct ControllerCom;
-
-impl ControllerCom {
-    pub fn new() -> Self {
-        Self {}
-    }
-}

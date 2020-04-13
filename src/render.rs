@@ -1,6 +1,7 @@
 pub mod sdl;
 
 use specs::{prelude::*, Component};
+use vitrellogy_macro::DefaultConstructor;
 
 use crate::misc::vec::Vec2;
 use crate::physics::TransformCom;
@@ -58,32 +59,18 @@ impl SpriteCom {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, DefaultConstructor)]
 pub struct CameraRes {
     pub pos: Vec2<f32>,
     pub zoom: f32,
     pub screen: Vec2<u32>
 }
 
-impl CameraRes {
-    pub fn new(pos: Vec2<f32>, zoom: f32, screen: Vec2<u32>) -> Self {
-        Self {
-            pos: pos,
-            zoom: zoom,
-            screen: screen
-        }
-    }
-}
-
-#[derive(Component, Debug)]
+#[derive(Component, Debug, DefaultConstructor)]
 #[storage(VecStorage)]
 pub struct CameraCom;
 
-impl CameraCom {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+#[derive(DefaultConstructor)]
 pub struct CameraSys;
 
 impl<'a> System<'a> for CameraSys {
@@ -97,11 +84,5 @@ impl<'a> System<'a> for CameraSys {
         for (_com, transform) in (&coms, &transforms).join() {
             camera.pos = transform.pos;
         }
-    }
-}
-
-impl CameraSys {
-    pub fn new() -> Self {
-        Self {}
     }
 }

@@ -15,3 +15,7 @@ features = ["image"]
 [dependencies.specs]
 version = "0.16.1"
 features = ["specs-derive"]
+
+[dependencies.vitrellogy-macro]
+path = "./vitrellogy-macro/"
+version = "0.1.0"

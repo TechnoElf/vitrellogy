@@ -1,13 +1,9 @@
 pub mod vec;
 
-#[derive(Default, Debug)]
-pub struct AppStateRes(pub AppState);
+use vitrellogy_macro::DefaultConstructor;
 
-impl AppStateRes {
-    pub fn new(state: AppState) -> Self {
-        Self(state)
-    }
-}
+#[derive(Default, Debug, DefaultConstructor)]
+pub struct AppStateRes(pub AppState);
 
 #[derive(Debug)]
 pub enum AppState {
