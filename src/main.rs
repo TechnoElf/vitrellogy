@@ -1,5 +1,6 @@
 use std::time::Instant;
-
+use std::rc::Rc;
+use std::cell::RefCell;
 use specs::prelude::*;
 
 mod misc;
@@ -7,7 +8,7 @@ use misc::{AppState, AppStateRes};
 use misc::vec::Vec2;
 
 mod render;
-use render::{Renderer, SpriteCom, RenderSys, CameraRes, CameraCom, CameraSys};
+use render::{Renderer, SpriteCom, SpriteRenderSys, CameraRes, CameraCom, CameraSys, TextRenderSys, TextCom};
 use render::sdl::SDLRenderer;
 
 mod input;
@@ -26,17 +27,24 @@ fn main() {
     world.register::<SpriteCom>();
     world.register::<ControllerCom>();
     world.register::<CameraCom>();
+    world.register::<TextCom>();
 
     // Initialise systems
     let sdl_context = sdl2::init().unwrap();
-    let mut renderer = RenderSys::new(SDLRenderer::init(&sdl_context, Vec2::new(800, 600)));
+    let shared_renderer = Rc::new(RefCell::new(SDLRenderer::init(&sdl_context, Vec2::new(800, 600))));
+    let mut sprite_renderer = SpriteRenderSys::new(shared_renderer.clone());
+    let mut text_renderer = TextRenderSys::new(shared_renderer.clone());
     let input = InputSys::new(SDLInput::init(&sdl_context));
 
-    renderer.renderer.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
-    renderer.renderer.add_sprite("tree", "assets/placeholder/sprites/tree.png");
-    renderer.renderer.add_sprite("r", "assets/placeholder/sprites/32x32-w-r.png");
-    renderer.renderer.add_sprite("g", "assets/placeholder/sprites/32x32-w-g.png");
-    renderer.renderer.add_sprite("b", "assets/placeholder/sprites/32x32-w-b.png");
+    shared_renderer.borrow_mut().add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
+    shared_renderer.borrow_mut().add_sprite("tree", "assets/placeholder/sprites/tree.png");
+    shared_renderer.borrow_mut().add_sprite("r", "assets/placeholder/sprites/32x32-w-r.png");
+    shared_renderer.borrow_mut().add_sprite("g", "assets/placeholder/sprites/32x32-w-g.png");
+    shared_renderer.borrow_mut().add_sprite("b", "assets/placeholder/sprites/32x32-w-b.png");
+
+    shared_renderer.borrow_mut().add_font("caveat", "assets/placeholder/fonts/caveat.ttf", 32, 255, 255, 255);
+    shared_renderer.borrow_mut().add_font("nemoy", "assets/placeholder/fonts/nemoy.otf", 32, 200, 128, 255);
+    shared_renderer.borrow_mut().add_font("patrickhand", "assets/placeholder/fonts/patrickhand.ttf", 32, 255, 255, 255);
 
     let controller = ControllerSys::new();
     let camera = CameraSys::new();
@@ -46,7 +54,8 @@ fn main() {
         .with(controller, "controller", &[])
         .with(camera, "camera", &["controller"])
         .with_thread_local(input)
-        .with_thread_local(renderer).build();
+        .with_thread_local(sprite_renderer)
+        .with_thread_local(text_renderer).build();
 
     // Add resources
     world.insert(AppStateRes::new(AppState::Running));
@@ -73,6 +82,13 @@ fn main() {
         .with(TransformCom::new(Vec2::new(6.0, -1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
         .with(TransformCom::new(Vec2::new(7.0, -1.0))).build();
+
+    world.create_entity().with(TextCom::new("Vitrellogy", "caveat", Vec2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vec2::new(0.0, 5.0))).build();
+    world.create_entity().with(TextCom::new("Vitrellogy", "nemoy", Vec2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vec2::new(0.0, 6.0))).build();
+    world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vec2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vec2::new(0.0, 7.0))).build();
 
     world.create_entity().with(SpriteCom::new("wizard", Vec2::new(2.0, 2.0)))
         .with(TransformCom::new(Vec2::new(0.0, 0.0)))

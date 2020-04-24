@@ -1,5 +1,7 @@
 pub mod sdl;
 
+use std::rc::Rc;
+use std::cell::RefCell;
 use specs::{prelude::*, Component};
 use vitrellogy_macro::DefaultConstructor;
 
@@ -8,16 +10,18 @@ use crate::physics::TransformCom;
 
 pub trait Renderer {
     fn render(&mut self, sprite_name: &str, sprite_pos: Vec2<f32>, sprite_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>);
+    fn write(&mut self, text: &str, font: &str, text_pos: Vec2<f32>, text_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>);
     fn pre(&mut self);
     fn post(&mut self);
     fn add_sprite(&mut self, name: &str, file: &str);
+    fn add_font(&mut self, name: &str, file: &str, size: u16, red: u8, green: u8, blue: u8);
 }
 
-pub struct RenderSys<T: Renderer> {
-    pub renderer: T
+pub struct SpriteRenderSys<T: Renderer> {
+    pub renderer: Rc<RefCell<T>>
 }
 
-impl<'a, T: Renderer> System<'a> for RenderSys<T> {
+impl<'a, T: Renderer> System<'a> for SpriteRenderSys<T> {
     type SystemData = (Read<'a, CameraRes>,
         ReadStorage<'a, SpriteCom>,
         ReadStorage<'a, TransformCom>);
@@ -25,18 +29,44 @@ impl<'a, T: Renderer> System<'a> for RenderSys<T> {
     fn run(&mut self, data: Self::SystemData) {
         let (camera, sprites, transforms) = data;
 
-        self.renderer.pre();
+        self.renderer.borrow_mut().pre();
 
         for (sprite, transform) in (&sprites, &transforms).join() {
-            self.renderer.render(&sprite.name, transform.pos, sprite.dim, camera.pos, camera.zoom, camera.screen);
+            self.renderer.borrow_mut().render(&sprite.name, transform.pos, sprite.dim, camera.pos, camera.zoom, camera.screen);
         }
-
-        self.renderer.post();
     }
 }
 
-impl<T: Renderer> RenderSys<T> {
-    pub fn new(renderer: T) -> Self {
+impl<T: Renderer> SpriteRenderSys<T> {
+    pub fn new(renderer: Rc<RefCell<T>>) -> Self {
+        Self {
+            renderer: renderer
+        }
+    }
+}
+
+pub struct TextRenderSys<T: Renderer> {
+    pub renderer: Rc<RefCell<T>>
+}
+
+impl<'a, T: Renderer> System<'a> for TextRenderSys<T> {
+    type SystemData = (Read<'a, CameraRes>,
+        ReadStorage<'a, TextCom>,
+        ReadStorage<'a, TransformCom>);
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (camera, text_fields, transforms) = data;
+
+        for (text_field, transform) in (&text_fields, &transforms).join() {
+            self.renderer.borrow_mut().write(&text_field.text, &text_field.font, transform.pos, text_field.dim, camera.pos, camera.zoom, camera.screen);
+        }
+
+        self.renderer.borrow_mut().post();
+    }
+}
+
+impl<T: Renderer> TextRenderSys<T> {
+    pub fn new(renderer: Rc<RefCell<T>>) -> Self {
         Self {
             renderer: renderer
         }
@@ -54,6 +84,24 @@ impl SpriteCom {
     pub fn new(name: &str, dim: Vec2<f32>) -> Self {
         Self {
             name: name.to_string(),
+            dim: dim
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+pub struct TextCom {
+    pub text: String,
+    pub font: String,
+    pub dim: Vec2<f32>
+}
+
+impl TextCom {
+    pub fn new(text: &str, font: &str, dim: Vec2<f32>) -> Self {
+        Self {
+            text: text.to_string(),
+            font: font.to_string(),
             dim: dim
         }
     }

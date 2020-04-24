@@ -10,11 +10,11 @@ num-traits = "0.2.11"
 [dependencies.sdl2]
 version = "0.33.0"
 default-features = false
-features = ["image"]
+features = ["image", "ttf"]
 
 [dependencies.specs]
 version = "0.16.1"
-features = ["specs-derive"]
+features = ["specs-derive", "parallel"]
 
 [dependencies.vitrellogy-macro]
 path = "./vitrellogy-macro/"
