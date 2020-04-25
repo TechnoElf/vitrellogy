@@ -1,6 +1,7 @@
 use std::ops::*;
 use std::fmt::*;
 use num_traits::cast::{NumCast, cast};
+use num_traits::sign::Signed;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Vec2<T> {
@@ -68,6 +69,13 @@ impl<T: AddAssign<T>> AddAssign for Vec2<T> {
     }
 }
 
+impl<T: MulAssign<T>> MulAssign for Vec2<T> {
+    fn mul_assign(&mut self, rhs: Vec2<T>) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+    }
+}
+
 impl<T: Add<T, Output=T> + Copy> Add<T> for Vec2<T> {
     type Output = Self;
     fn add(self, rhs: T) -> Self {
@@ -130,6 +138,15 @@ impl<T: Neg<Output=T>> Vec2<T> {
         Vec2 {
             x: self.x,
             y: -self.y
+        }
+    }
+}
+
+impl<T: Signed> Vec2<T> {
+    pub fn abs(self) -> Self {
+        Vec2 {
+            x: self.x.abs(),
+            y: self.y.abs()
         }
     }
 }

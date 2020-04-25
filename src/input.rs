@@ -1,6 +1,4 @@
-pub mod controller;
 pub mod key;
-
 pub mod sdl;
 
 use specs::prelude::*;

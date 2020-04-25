@@ -27,6 +27,7 @@ impl KeysRes {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(dead_code)]
 pub enum Key {
+    Unknown,
     A,
     B,
     C,
@@ -52,5 +53,6 @@ pub enum Key {
     W,
     X,
     Y,
-    Z
+    Z,
+    Space
 }

@@ -14,26 +14,20 @@ use render::sdl::SDLRenderer;
 mod input;
 use input::InputSys;
 use input::key::KeysRes;
-use input::controller::{ControllerCom, ControllerSys};
 use input::sdl::SDLInput;
 
 mod physics;
-use physics::{TransformCom, DeltaTimeRes};
+use physics::{TransformCom, DeltaTimeRes, PhysicsSys, DynamicCom};
+use physics::colliders::ColliderAABBCom;
+use physics::controller::{ControllerCom, ControllerSys};
+use physics::forces::{ForcesSys, GravityCom, DragCom};
 
 fn main() {
-    // Register components
-    let mut world = World::new();
-    world.register::<TransformCom>();
-    world.register::<SpriteCom>();
-    world.register::<ControllerCom>();
-    world.register::<CameraCom>();
-    world.register::<TextCom>();
-
     // Initialise systems
     let sdl_context = sdl2::init().unwrap();
     let shared_renderer = Rc::new(RefCell::new(SDLRenderer::init(&sdl_context, Vec2::new(800, 600))));
-    let mut sprite_renderer = SpriteRenderSys::new(shared_renderer.clone());
-    let mut text_renderer = TextRenderSys::new(shared_renderer.clone());
+    let sprite_renderer = SpriteRenderSys::new(Rc::clone(&shared_renderer));
+    let text_renderer = TextRenderSys::new(Rc::clone(&shared_renderer));
     let input = InputSys::new(SDLInput::init(&sdl_context));
 
     shared_renderer.borrow_mut().add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
@@ -48,14 +42,21 @@ fn main() {
 
     let controller = ControllerSys::new();
     let camera = CameraSys::new();
+    let physics = PhysicsSys::new();
+    let forces = ForcesSys::new();
 
-    // Combine all systems into a single dispatcher
+    // Combine all systems into a single dispatcher and set up the game world
     let mut dispatcher = DispatcherBuilder::new()
-        .with(controller, "controller", &[])
-        .with(camera, "camera", &["controller"])
         .with_thread_local(input)
+        .with(controller, "controller", &[])
+        .with(forces, "forces", &[])
+        .with(physics, "physics", &["controller", "forces"])
+        .with(camera, "camera", &["physics"])
         .with_thread_local(sprite_renderer)
         .with_thread_local(text_renderer).build();
+
+    let mut world = World::new();
+    dispatcher.setup(&mut world);
 
     // Add resources
     world.insert(AppStateRes::new(AppState::Running));
@@ -65,35 +66,50 @@ fn main() {
 
     // Create entites
     world.create_entity().with(SpriteCom::new("tree", Vec2::new(4.0, 4.0)))
-        .with(TransformCom::new(Vec2::new(2.0, 0.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(2.0, 0.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(0.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(0.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(1.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(1.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(2.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(2.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(3.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(3.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(4.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(4.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(5.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(5.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(6.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(6.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
     world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(7.0, -1.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(7.0, -1.0)))
+        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
 
     world.create_entity().with(TextCom::new("Vitrellogy", "caveat", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(0.0, 5.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(0.0, 5.0))).build();
     world.create_entity().with(TextCom::new("Vitrellogy", "nemoy", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(0.0, 6.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(0.0, 6.0)))
+        .with(DynamicCom::new())
+        .with(GravityCom::new())
+        .with(ColliderAABBCom::new(Vec2::new(5.0, 1.0))).build();
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new(Vec2::new(0.0, 7.0))).build();
+        .with(TransformCom::new_pos(Vec2::new(0.0, 7.0))).build();
 
     world.create_entity().with(SpriteCom::new("wizard", Vec2::new(2.0, 2.0)))
-        .with(TransformCom::new(Vec2::new(0.0, 0.0)))
+        .with(TransformCom::new_pos(Vec2::new(0.0, 1.0)))
         .with(ControllerCom::new())
-        .with(CameraCom::new()).build();
+        .with(CameraCom::new())
+        .with(ColliderAABBCom::new(Vec2::new(2.0, 2.0)))
+        .with(DynamicCom::new())
+        .with(GravityCom::new())
+        .with(DragCom::new()).build();
 
     let target_frame_rate = 60.0;
     let target_frame_time = 1.0 / target_frame_rate;

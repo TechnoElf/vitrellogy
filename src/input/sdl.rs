@@ -77,7 +77,8 @@ impl SDLInput {
             Keycode::X => Key::X,
             Keycode::Y => Key::Y,
             Keycode::Z => Key::Z,
-            _ => Key::Q
+            Keycode::Space => Key::Space,
+            _ => Key::Unknown
         }
     }
 }

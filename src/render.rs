@@ -90,7 +90,7 @@ impl SpriteCom {
 }
 
 #[derive(Component, Debug)]
-#[storage(VecStorage)]
+#[storage(DenseVecStorage)]
 pub struct TextCom {
     pub text: String,
     pub font: String,
@@ -115,7 +115,7 @@ pub struct CameraRes {
 }
 
 #[derive(Component, Debug, DefaultConstructor)]
-#[storage(VecStorage)]
+#[storage(HashMapStorage)]
 pub struct CameraCom;
 
 #[derive(DefaultConstructor)]
