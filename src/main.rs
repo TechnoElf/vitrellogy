@@ -1,6 +1,7 @@
 use std::time::Instant;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::sync::{Arc, Mutex};
 use specs::prelude::*;
 
 mod misc;
@@ -22,6 +23,10 @@ use physics::colliders::ColliderAABBCom;
 use physics::controller::{ControllerCom, ControllerSys};
 use physics::forces::{ForcesSys, GravityCom, DragCom};
 
+mod net;
+use net::{SyncTransformCom, NetworkSyncSys, NetworkRes};
+use net::client::NetworkClient;
+
 fn main() {
     // Initialise systems
     let sdl_context = sdl2::init().unwrap();
@@ -29,6 +34,9 @@ fn main() {
     let sprite_renderer = SpriteRenderSys::new(Rc::clone(&shared_renderer));
     let text_renderer = TextRenderSys::new(Rc::clone(&shared_renderer));
     let input = InputSys::new(SDLInput::init(&sdl_context));
+
+    let shared_network = Arc::new(Mutex::new(NetworkClient::new().unwrap()));
+    let network_sync = NetworkSyncSys::new(Arc::clone(&shared_network));
 
     shared_renderer.borrow_mut().add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
     shared_renderer.borrow_mut().add_sprite("tree", "assets/placeholder/sprites/tree.png");
@@ -45,12 +53,14 @@ fn main() {
     let physics = PhysicsSys::new();
     let forces = ForcesSys::new();
 
+
     // Combine all systems into a single dispatcher and set up the game world
     let mut dispatcher = DispatcherBuilder::new()
         .with_thread_local(input)
+        .with(network_sync, "network_sync", &[])
         .with(controller, "controller", &[])
         .with(forces, "forces", &[])
-        .with(physics, "physics", &["controller", "forces"])
+        .with(physics, "physics", &["controller", "forces", "network_sync"])
         .with(camera, "camera", &["physics"])
         .with_thread_local(sprite_renderer)
         .with_thread_local(text_renderer).build();
@@ -63,6 +73,7 @@ fn main() {
     world.insert(DeltaTimeRes::new(0.0));
     world.insert(KeysRes::new());
     world.insert(CameraRes::new(Vec2::new(0.0, 0.0), 1.0, Vec2::new(800, 600)));
+    world.insert(NetworkRes::new(true, true, false, (127, 0, 0, 1)));
 
     // Create entites
     world.create_entity().with(SpriteCom::new("tree", Vec2::new(4.0, 4.0)))
@@ -109,7 +120,9 @@ fn main() {
         .with(ColliderAABBCom::new(Vec2::new(2.0, 2.0)))
         .with(DynamicCom::new())
         .with(GravityCom::new())
-        .with(DragCom::new()).build();
+        .with(DragCom::new())
+	    .with(SyncTransformCom::new()).build();
+
 
     let target_frame_rate = 60.0;
     let target_frame_time = 1.0 / target_frame_rate;
@@ -125,9 +138,9 @@ fn main() {
         }
         time = Instant::now();
 
-        if delta_time > target_frame_time + 0.001 {
-            println!("dt={}", delta_time);
-        }
+        //if delta_time > target_frame_time + 0.001 {
+        //    println!("dt={}", delta_time);
+        //}
 
         // Update the delta time resource in a block so rust doesn't complain about multiple borrows
         {

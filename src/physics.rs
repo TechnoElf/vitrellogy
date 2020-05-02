@@ -8,7 +8,7 @@ use vitrellogy_macro::DefaultConstructor;
 use crate::misc::vec::Vec2;
 use crate::physics::colliders::{ColliderAABBCom, aabb_intersection};
 
-#[derive(Component, Debug, DefaultConstructor)]
+#[derive(Component, Debug, Clone, DefaultConstructor)]
 #[storage(VecStorage)]
 pub struct TransformCom {
     pub pos: Vec2<f32>,
