@@ -1,3 +1,5 @@
+pub mod ui;
+
 pub mod sdl;
 
 use std::rc::Rc;
@@ -11,6 +13,8 @@ use crate::physics::TransformCom;
 pub trait Renderer {
     fn render(&mut self, sprite_name: &str, sprite_pos: Vec2<f32>, sprite_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>);
     fn write(&mut self, text: &str, font: &str, text_pos: Vec2<f32>, text_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>);
+    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vec2<f32>, sprite_dim: Vec2<f32>, cam_screen: Vec2<u32>);
+    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vec2<f32>, text_dim: Vec2<f32>, cam_screen: Vec2<u32>);
     fn pre(&mut self);
     fn post(&mut self);
     fn add_sprite(&mut self, name: &str, file: &str);
@@ -60,8 +64,6 @@ impl<'a, T: Renderer> System<'a> for TextRenderSys<T> {
         for (text_field, transform) in (&text_fields, &transforms).join() {
             self.renderer.borrow_mut().write(&text_field.text, &text_field.font, transform.pos, text_field.dim, camera.pos, camera.zoom, camera.screen);
         }
-
-        self.renderer.borrow_mut().post();
     }
 }
 

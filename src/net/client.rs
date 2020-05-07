@@ -45,7 +45,7 @@ impl NetworkClient {
         let mut packets: Vec<Packet> = Vec::new();
 
         if self.open {
-            while let Some((packet, origin_id, address, time)) = self.receive_packet() {
+            while let Some((packet, origin_id, address, _time)) = self.receive_packet() {
                 match packet {
                     Packet::ConRequest => {
                         let mut new_id = origin_id;

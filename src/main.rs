@@ -11,6 +11,7 @@ use misc::vec::Vec2;
 mod render;
 use render::{Renderer, SpriteCom, SpriteRenderSys, CameraRes, CameraCom, CameraSys, TextRenderSys, TextCom};
 use render::sdl::SDLRenderer;
+use render::ui::{UISys, TextUICom};
 
 mod input;
 use input::InputSys;
@@ -33,6 +34,8 @@ fn main() {
     let shared_renderer = Rc::new(RefCell::new(SDLRenderer::init(&sdl_context, Vec2::new(800, 600))));
     let sprite_renderer = SpriteRenderSys::new(Rc::clone(&shared_renderer));
     let text_renderer = TextRenderSys::new(Rc::clone(&shared_renderer));
+    let ui_renderer = UISys::new(Rc::clone(&shared_renderer));
+
     let input = InputSys::new(SDLInput::init(&sdl_context));
 
     let shared_network = Arc::new(Mutex::new(NetworkClient::new().unwrap()));
@@ -63,7 +66,8 @@ fn main() {
         .with(physics, "physics", &["controller", "forces", "network_sync"])
         .with(camera, "camera", &["physics"])
         .with_thread_local(sprite_renderer)
-        .with_thread_local(text_renderer).build();
+        .with_thread_local(text_renderer)
+        .with_thread_local(ui_renderer).build();
 
     let mut world = World::new();
     dispatcher.setup(&mut world);
@@ -78,32 +82,13 @@ fn main() {
     // Create entites
     world.create_entity().with(SpriteCom::new("tree", Vec2::new(4.0, 4.0)))
         .with(TransformCom::new_pos(Vec2::new(2.0, 0.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(0.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(1.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(2.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(3.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(4.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(5.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(6.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
-    world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
-        .with(TransformCom::new_pos(Vec2::new(7.0, -1.0)))
-        .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
+    for pos in 0..20 {
+        world.create_entity().with(SpriteCom::new("b", Vec2::new(1.0, 1.0)))
+            .with(TransformCom::new_pos(Vec2::new(pos as f32, -1.0)))
+            .with(ColliderAABBCom::new(Vec2::new(1.0, 1.0))).build();
+    }
 
-    world.create_entity().with(TextCom::new("Vitrellogy", "caveat", Vec2::new(1.0, 1.0)))
+    world.create_entity().with(TextCom::new("Sphinx of black quartz, judge my vow", "caveat", Vec2::new(1.0, 1.0)))
         .with(TransformCom::new_pos(Vec2::new(0.0, 5.0))).build();
     world.create_entity().with(TextCom::new("Vitrellogy", "nemoy", Vec2::new(1.0, 1.0)))
         .with(TransformCom::new_pos(Vec2::new(0.0, 6.0)))
@@ -112,6 +97,9 @@ fn main() {
         .with(ColliderAABBCom::new(Vec2::new(5.0, 1.0))).build();
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vec2::new(1.0, 1.0)))
         .with(TransformCom::new_pos(Vec2::new(0.0, 7.0))).build();
+
+    world.create_entity().with(TextUICom::new("Hello World!", "caveat", Vec2::new(0.5, 0.1)))
+        .with(TransformCom::new_pos(Vec2::new(0.0, 0.5))).build();
 
     world.create_entity().with(SpriteCom::new("wizard", Vec2::new(2.0, 2.0)))
         .with(TransformCom::new_pos(Vec2::new(0.0, 1.0)))
@@ -138,9 +126,9 @@ fn main() {
         }
         time = Instant::now();
 
-        //if delta_time > target_frame_time + 0.001 {
-        //    println!("dt={}", delta_time);
-        //}
+        if delta_time > target_frame_time + 0.001 {
+            println!("dt={}", delta_time);
+        }
 
         // Update the delta time resource in a block so rust doesn't complain about multiple borrows
         {

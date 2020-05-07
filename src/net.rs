@@ -30,7 +30,7 @@ impl<'a> System<'a> for NetworkSyncSys {
         WriteStorage<'a, TransformCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut config, sync_transform_flags, remote_transform_flags, mut transforms) = data;
+        let (mut config, sync_transform_flags, _remote_transform_flags, mut transforms) = data;
         let mut client = self.client.lock().unwrap();
 
         let data = client.receive();
