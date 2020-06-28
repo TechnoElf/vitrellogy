@@ -49,23 +49,23 @@ impl<'a> Renderer for SDLRenderer<'a> {
         self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }
 
-    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vec2<f32>, sprite_dim: Vec2<f32>, cam_screen: Vec2<u32>) {
-        let pos = (Vec2::new(sprite_pos.x, 1.0 - (sprite_pos.y + sprite_dim.y)) * cam_screen.convert()).convert();
-        let dim = (sprite_dim * cam_screen.convert()).convert();
+    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vec2<u32>, sprite_dim: Vec2<u32>, cam_screen: Vec2<u32>) {
+        let pos = Vec2::new(sprite_pos.x, cam_screen.y - (sprite_pos.y + sprite_dim.y)).convert();
+        let dim = sprite_dim;
 
         self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }
 
-    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vec2<f32>, text_dim: Vec2<f32>, cam_screen: Vec2<u32>) {
+    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vec2<u32>, text_dim: Vec2<u32>, cam_screen: Vec2<u32>) {
         let (font, color) = self.font_cache.get(font);
 
         let text_surface = font.render(text).blended(color.clone()).unwrap();
         let (w, h) = text_surface.size();
         let text_texture = self.context.texture_creator.create_texture_from_surface(text_surface).unwrap();
 
-        let text_dim = Vec2::new(text_dim.y * (w as f32 / h as f32), text_dim.y);
-        let pos = (Vec2::new(text_pos.x, 1.0 - (text_pos.y + text_dim.y)) * cam_screen.convert()).convert();
-        let dim = (text_dim * cam_screen.convert()).convert();
+        let text_dim = Vec2::new((text_dim.y as f32 * (w as f32 / h as f32)) as u32, text_dim.y);
+        let pos = Vec2::new(text_pos.x, cam_screen.y - (text_pos.y + text_dim.y)).convert();
+        let dim = text_dim;
 
         self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }

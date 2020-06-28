@@ -2,7 +2,7 @@ use sdl2::*;
 use sdl2::event::*;
 use sdl2::keyboard::*;
 
-use crate::input::Input;
+use crate::input::{Input, MouseRes};
 use crate::input::key::{KeysRes, Key};
 use crate::misc::{AppStateRes, AppState};
 use crate::misc::vec::Vec2;
@@ -17,7 +17,8 @@ pub struct SDLInput {
 }
 
 impl Input for SDLInput {
-    fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes) {
+    fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
+        mouse.0 = None;
         for event in self.context.events.poll_iter() {
             match event {
                 Event::Quit {..} => state.0 = AppState::Stopping,
@@ -29,7 +30,7 @@ impl Input for SDLInput {
                 },
                 Event::KeyDown { keycode: Some(k), .. } => keys.press(SDLInput::sdl_to_key(k)),
                 Event::KeyUp { keycode: Some(k), .. } => keys.release(SDLInput::sdl_to_key(k)),
-                Event::MouseButtonUp { x, y, .. } => println!("Click at ({}, {})", x, y),
+                Event::MouseButtonUp { x, y, .. } => mouse.0 = Some(Vec2::new(x as u32, camera.screen.y - y as u32)),
                 _ => {}
             }
         }

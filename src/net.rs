@@ -9,6 +9,7 @@ use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Wri
 use crate::physics::TransformCom;
 use crate::net::client::NetworkClient;
 use crate::net::packet::{Packet, TransformPacket};
+use crate::render::ui::UIEventRes;
 
 #[derive(Component, Debug, DefaultConstructor, Default)]
 #[storage(NullStorage)]
@@ -25,13 +26,26 @@ pub struct NetworkSyncSys {
 
 impl<'a> System<'a> for NetworkSyncSys {
     type SystemData = (Write<'a, NetworkRes>,
+        Write<'a, UIEventRes>,
         ReadStorage<'a, SyncTransformCom>,
         ReadStorage<'a, RemoteTransformCom>,
         WriteStorage<'a, TransformCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut config, sync_transform_flags, _remote_transform_flags, mut transforms) = data;
+        let (mut config, mut ui_events, sync_transform_flags, _remote_transform_flags, mut transforms) = data;
         let mut client = self.client.lock().unwrap();
+
+        for i in 0..ui_events.0.len() {
+            match ui_events.0.get(i).unwrap().element_name.as_str() {
+                "net_connect" => {
+                    println!("Connecting!");
+                    config.hosting = false;
+                    config.dirty = true;
+                    ui_events.0.remove(i);
+                },
+                _ => ()
+            }
+        }
 
         let data = client.receive();
         if data.len() > 0 {

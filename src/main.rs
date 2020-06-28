@@ -11,10 +11,10 @@ use misc::vec::Vec2;
 mod render;
 use render::{Renderer, SpriteCom, SpriteRenderSys, CameraRes, CameraCom, CameraSys, TextRenderSys, TextCom};
 use render::sdl::SDLRenderer;
-use render::ui::{UISys, TextUICom};
+use render::ui::{UISys, TextUICom, ButtonUICom};
 
 mod input;
-use input::InputSys;
+use input::{InputSys, MouseRes};
 use input::key::KeysRes;
 use input::sdl::SDLInput;
 
@@ -47,9 +47,9 @@ fn main() {
     shared_renderer.borrow_mut().add_sprite("g", "assets/placeholder/sprites/32x32-w-g.png");
     shared_renderer.borrow_mut().add_sprite("b", "assets/placeholder/sprites/32x32-w-b.png");
 
-    shared_renderer.borrow_mut().add_font("caveat", "assets/placeholder/fonts/caveat.ttf", 32, 255, 255, 255);
-    shared_renderer.borrow_mut().add_font("nemoy", "assets/placeholder/fonts/nemoy.otf", 32, 200, 128, 255);
-    shared_renderer.borrow_mut().add_font("patrickhand", "assets/placeholder/fonts/patrickhand.ttf", 32, 255, 255, 255);
+    shared_renderer.borrow_mut().add_font("caveat", "assets/placeholder/fonts/caveat.ttf", 64, 10, 10, 10);
+    shared_renderer.borrow_mut().add_font("nemoy", "assets/placeholder/fonts/nemoy.otf", 64, 200, 128, 255);
+    shared_renderer.borrow_mut().add_font("patrickhand", "assets/placeholder/fonts/patrickhand.ttf", 64, 255, 255, 255);
 
     let controller = ControllerSys::new();
     let camera = CameraSys::new();
@@ -76,6 +76,7 @@ fn main() {
     world.insert(AppStateRes::new(AppState::Running));
     world.insert(DeltaTimeRes::new(0.0));
     world.insert(KeysRes::new());
+    world.insert(MouseRes::new(None));
     world.insert(CameraRes::new(Vec2::new(0.0, 0.0), 1.0, Vec2::new(800, 600)));
     world.insert(NetworkRes::new(true, true, false, (127, 0, 0, 1)));
 
@@ -98,8 +99,11 @@ fn main() {
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vec2::new(1.0, 1.0)))
         .with(TransformCom::new_pos(Vec2::new(0.0, 7.0))).build();
 
-    world.create_entity().with(TextUICom::new("Hello World!", "caveat", Vec2::new(0.5, 0.1)))
-        .with(TransformCom::new_pos(Vec2::new(0.0, 0.5))).build();
+    world.create_entity().with(ButtonUICom::new("g", "r", Vec2::new(200, 50), "net_connect"))
+        .with(TransformCom::new_pos(Vec2::new(0.0, 0.0))).build();
+
+    world.create_entity().with(TextUICom::new("Connect", "caveat", Vec2::new(200, 50)))
+        .with(TransformCom::new_pos(Vec2::new(0.0, 0.0))).build();
 
     world.create_entity().with(SpriteCom::new("wizard", Vec2::new(2.0, 2.0)))
         .with(TransformCom::new_pos(Vec2::new(0.0, 1.0)))
