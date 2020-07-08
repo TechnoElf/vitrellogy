@@ -1,13 +1,14 @@
 pub mod key;
 pub mod sdl;
 
+use nalgebra::Vector2;
+
 use specs::prelude::*;
 
 use vitrellogy_macro::DefaultConstructor;
 use crate::input::key::KeysRes;
 use crate::misc::AppStateRes;
 use crate::render::CameraRes;
-use crate::misc::vec::Vec2;
 
 pub trait Input {
     fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes);
@@ -38,4 +39,4 @@ impl<T: Input> InputSys<T> {
 }
 
 #[derive(Default, Debug, DefaultConstructor)]
-pub struct MouseRes(pub Option<Vec2<u32>>);
+pub struct MouseRes(pub Option<Vector2<u32>>);

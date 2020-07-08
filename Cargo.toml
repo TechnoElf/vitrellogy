@@ -7,6 +7,9 @@ edition = "2018"
 [dependencies]
 num-traits = "0.2.11"
 rand = "0.7.3"
+nalgebra = "0.20"
+ncollide2d = "0.22"
+nphysics2d = "0.14"
 
 [dependencies.sdl2]
 version = "0.33.0"

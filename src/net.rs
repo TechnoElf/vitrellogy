@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use vitrellogy_macro::DefaultConstructor;
 use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Write};
 
-use crate::physics::TransformCom;
+use crate::misc::TransformCom;
 use crate::net::client::NetworkClient;
 use crate::net::packet::{Packet, TransformPacket};
 use crate::render::ui::UIEventRes;

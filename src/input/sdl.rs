@@ -2,10 +2,11 @@ use sdl2::*;
 use sdl2::event::*;
 use sdl2::keyboard::*;
 
+use nalgebra::Vector2;
+
 use crate::input::{Input, MouseRes};
 use crate::input::key::{KeysRes, Key};
 use crate::misc::{AppStateRes, AppState};
-use crate::misc::vec::Vec2;
 use crate::render::CameraRes;
 
 struct SDLContext {
@@ -24,13 +25,13 @@ impl Input for SDLInput {
                 Event::Quit {..} => state.0 = AppState::Stopping,
                 Event::Window { win_event: e, .. } => {
                     match e {
-                        WindowEvent::Resized(w, h) => camera.screen = Vec2::new(w as u32, h as u32),
+                        WindowEvent::Resized(w, h) => camera.screen = Vector2::new(w as u32, h as u32),
                         _ => {}
                     }
                 },
                 Event::KeyDown { keycode: Some(k), .. } => keys.press(SDLInput::sdl_to_key(k)),
                 Event::KeyUp { keycode: Some(k), .. } => keys.release(SDLInput::sdl_to_key(k)),
-                Event::MouseButtonUp { x, y, .. } => mouse.0 = Some(Vec2::new(x as u32, camera.screen.y - y as u32)),
+                Event::MouseButtonUp { x, y, .. } => mouse.0 = Some(Vector2::new(x as u32, camera.screen.y - y as u32)),
                 _ => {}
             }
         }

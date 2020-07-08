@@ -8,8 +8,10 @@ use sdl2::image::{Sdl2ImageContext, InitFlag, LoadTexture};
 use sdl2::rect::Rect;
 use sdl2::ttf::{Sdl2TtfContext, Font};
 
+use nalgebra::Vector2;
+
 use crate::render::Renderer;
-use crate::misc::vec::Vec2;
+use crate::misc::Convertable;
 
 #[allow(dead_code)]
 struct SDLContext {
@@ -26,15 +28,17 @@ pub struct SDLRenderer<'a> {
 }
 
 impl<'a> Renderer for SDLRenderer<'a> {
-    fn render(&mut self, sprite_name: &str, sprite_pos: Vec2<f32>, sprite_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>) {
+    fn render(&mut self, sprite_name: &str, sprite_pos: Vector2<f32>, sprite_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
         // Camera transformation
-        let pos = (((sprite_pos - cam_pos + Vec2::new(0.0, sprite_dim.y)).inv_y() / 5.0 * Vec2::new(cam_zoom, cam_zoom) * Vec2::new(1.0, cam_screen.x as f32 / cam_screen.y as f32) + 1.0) / 2.0 * Vec2::new(cam_screen.x, cam_screen.y).convert()).convert();
-        let dim = (sprite_dim * Vec2::new(cam_screen.x, cam_screen.y).convert() * Vec2::new(cam_zoom, cam_zoom) / 5.0 / 2.0 * Vec2::new(1.0, cam_screen.x as f32 / cam_screen.y as f32)).convert();
+        let pos_x = (((sprite_pos.x - cam_pos.x) / 5.0 * cam_zoom + 1.0) / 2.0 * cam_screen.x as f32) as i32;
+        let pos_y = ((-(sprite_pos.y - cam_pos.y + sprite_dim.y) / 5.0 * cam_zoom * (cam_screen.x as f32 / cam_screen.y as f32) + 1.0) / 2.0 * cam_screen.y as f32) as i32;
+        let dim_x = (sprite_dim.x * cam_screen.x as f32 * cam_zoom / 5.0 / 2.0) as u32;
+        let dim_y = (sprite_dim.y * cam_screen.y as f32 * cam_zoom / 5.0 / 2.0 * (cam_screen.x as f32 / cam_screen.y as f32)) as u32;
 
-        self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
+        self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos_x, pos_y, dim_x, dim_y)).unwrap();
     }
 
-    fn write(&mut self, text: &str, font: &str, text_pos: Vec2<f32>, text_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>) {
+    fn write(&mut self, text: &str, font: &str, text_pos: Vector2<f32>, text_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
         let (font, color) = self.font_cache.get(font);
 
         let text_surface = font.render(text).blended(color.clone()).unwrap();
@@ -42,29 +46,31 @@ impl<'a> Renderer for SDLRenderer<'a> {
         let text_texture = self.context.texture_creator.create_texture_from_surface(text_surface).unwrap();
 
         // Camera transformation
-        let text_dim = Vec2::new(text_dim.y * (w as f32 / h as f32), text_dim.y);
-        let pos = (((text_pos - cam_pos + Vec2::new(0.0, text_dim.y)).inv_y() / 5.0 * Vec2::new(cam_zoom, cam_zoom) * Vec2::new(1.0, cam_screen.x as f32 / cam_screen.y as f32) + 1.0) / 2.0 * Vec2::new(cam_screen.x, cam_screen.y).convert()).convert();
-        let dim = (text_dim * Vec2::new(cam_screen.x, cam_screen.y).convert() * Vec2::new(cam_zoom, cam_zoom) / 5.0 / 2.0 * Vec2::new(1.0, cam_screen.x as f32 / cam_screen.y as f32)).convert();
+        let text_dim = Vector2::new(text_dim.y * (w as f32 / h as f32), text_dim.y);
+        let pos_x = (((text_pos.x - cam_pos.x) / 5.0 * cam_zoom + 1.0) / 2.0 * cam_screen.x as f32) as i32;
+        let pos_y = ((-(text_pos.y - cam_pos.y + text_dim.y) / 5.0 * cam_zoom * (cam_screen.x as f32 / cam_screen.y as f32) + 1.0) / 2.0 * cam_screen.y as f32) as i32;
+        let dim_x = (text_dim.x * cam_screen.x as f32 * cam_zoom / 5.0 / 2.0) as u32;
+        let dim_y = (text_dim.y * cam_screen.y as f32 * cam_zoom / 5.0 / 2.0 * (cam_screen.x as f32 / cam_screen.y as f32)) as u32;
 
-        self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
+        self.context.canvas.copy(&text_texture, None, Rect::new(pos_x, pos_y, dim_x, dim_y)).unwrap();
     }
 
-    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vec2<u32>, sprite_dim: Vec2<u32>, cam_screen: Vec2<u32>) {
-        let pos = Vec2::new(sprite_pos.x, cam_screen.y - (sprite_pos.y + sprite_dim.y)).convert();
+    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vector2<u32>, sprite_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
+        let pos = Vector2::new(sprite_pos.x, cam_screen.y - (sprite_pos.y + sprite_dim.y)).convert();
         let dim = sprite_dim;
 
         self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }
 
-    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vec2<u32>, text_dim: Vec2<u32>, cam_screen: Vec2<u32>) {
+    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vector2<u32>, text_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
         let (font, color) = self.font_cache.get(font);
 
         let text_surface = font.render(text).blended(color.clone()).unwrap();
         let (w, h) = text_surface.size();
         let text_texture = self.context.texture_creator.create_texture_from_surface(text_surface).unwrap();
 
-        let text_dim = Vec2::new((text_dim.y as f32 * (w as f32 / h as f32)) as u32, text_dim.y);
-        let pos = Vec2::new(text_pos.x, cam_screen.y - (text_pos.y + text_dim.y)).convert();
+        let text_dim = Vector2::new((text_dim.y as f32 * (w as f32 / h as f32)) as u32, text_dim.y);
+        let pos = Vector2::new(text_pos.x, cam_screen.y - (text_pos.y + text_dim.y)).convert();
         let dim = text_dim;
 
         self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
@@ -99,7 +105,7 @@ impl<'a> Renderer for SDLRenderer<'a> {
 }
 
 impl SDLRenderer<'_> {
-    pub fn init<'a>(sdl_context: &'a Sdl, win_dim: Vec2<u32>) -> SDLRenderer<'a> {
+    pub fn init<'a>(sdl_context: &'a Sdl, win_dim: Vector2<u32>) -> SDLRenderer<'a> {
         let sdl_image_context = sdl2::image::init(InitFlag::PNG).unwrap();
         let sdl_font_context = sdl2::ttf::init().unwrap();
 

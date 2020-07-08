@@ -4,17 +4,19 @@ pub mod sdl;
 
 use std::rc::Rc;
 use std::cell::RefCell;
-use specs::{prelude::*, Component};
-use vitrellogy_macro::DefaultConstructor;
 
-use crate::misc::vec::Vec2;
-use crate::physics::TransformCom;
+use nalgebra::Vector2;
+
+use specs::{prelude::*, Component};
+
+use vitrellogy_macro::DefaultConstructor;
+use crate::misc::TransformCom;
 
 pub trait Renderer {
-    fn render(&mut self, sprite_name: &str, sprite_pos: Vec2<f32>, sprite_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>);
-    fn write(&mut self, text: &str, font: &str, text_pos: Vec2<f32>, text_dim: Vec2<f32>, cam_pos: Vec2<f32>, cam_zoom: f32, cam_screen: Vec2<u32>);
-    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vec2<u32>, sprite_dim: Vec2<u32>, cam_screen: Vec2<u32>);
-    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vec2<u32>, text_dim: Vec2<u32>, cam_screen: Vec2<u32>);
+    fn render(&mut self, sprite_name: &str, sprite_pos: Vector2<f32>, sprite_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>);
+    fn write(&mut self, text: &str, font: &str, text_pos: Vector2<f32>, text_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>);
+    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vector2<u32>, sprite_dim: Vector2<u32>, cam_screen: Vector2<u32>);
+    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vector2<u32>, text_dim: Vector2<u32>, cam_screen: Vector2<u32>);
     fn pre(&mut self);
     fn post(&mut self);
     fn add_sprite(&mut self, name: &str, file: &str);
@@ -79,11 +81,11 @@ impl<T: Renderer> TextRenderSys<T> {
 #[storage(VecStorage)]
 pub struct SpriteCom {
     pub name: String,
-    pub dim: Vec2<f32>
+    pub dim: Vector2<f32>
 }
 
 impl SpriteCom {
-    pub fn new(name: &str, dim: Vec2<f32>) -> Self {
+    pub fn new(name: &str, dim: Vector2<f32>) -> Self {
         Self {
             name: name.to_string(),
             dim: dim
@@ -96,11 +98,11 @@ impl SpriteCom {
 pub struct TextCom {
     pub text: String,
     pub font: String,
-    pub dim: Vec2<f32>
+    pub dim: Vector2<f32>
 }
 
 impl TextCom {
-    pub fn new(text: &str, font: &str, dim: Vec2<f32>) -> Self {
+    pub fn new(text: &str, font: &str, dim: Vector2<f32>) -> Self {
         Self {
             text: text.to_string(),
             font: font.to_string(),
@@ -109,11 +111,21 @@ impl TextCom {
     }
 }
 
-#[derive(Default, Debug, DefaultConstructor)]
+#[derive(Debug, DefaultConstructor)]
 pub struct CameraRes {
-    pub pos: Vec2<f32>,
+    pub pos: Vector2<f32>,
     pub zoom: f32,
-    pub screen: Vec2<u32>
+    pub screen: Vector2<u32>
+}
+
+impl Default for CameraRes {
+    fn default() -> Self {
+        Self {
+            pos: Vector2::new(0.0, 0.0),
+            zoom: 1.0,
+            screen: Vector2::new(800, 600)
+        }
+    }
 }
 
 #[derive(Component, Debug, DefaultConstructor)]

@@ -1,8 +1,11 @@
-use specs::{prelude::*, Component};
-use vitrellogy_macro::DefaultConstructor;
+use nalgebra::Vector2;
+use nphysics2d::math::{Force, ForceType};
+use nphysics2d::object::Body;
 
-use crate::misc::vec::Vec2;
-use crate::physics::TransformCom;
+use specs::{prelude::*, Component};
+
+use vitrellogy_macro::DefaultConstructor;
+use crate::physics::{PhysicsRes, RigidBodyCom};
 use crate::input::key::{KeysRes, Key};
 
 #[derive(DefaultConstructor)]
@@ -10,11 +13,12 @@ pub struct ControllerSys;
 
 impl<'a> System<'a> for ControllerSys {
     type SystemData = (Read<'a, KeysRes>,
+        Write<'a, PhysicsRes>,
         ReadStorage<'a, ControllerCom>,
-        WriteStorage<'a, TransformCom>);
+        ReadStorage<'a, RigidBodyCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (keys, controllers, mut transforms) = data;
+        let (keys, mut physics, controllers, rigid_bodies) = data;
 
         let horizontal = match (keys.pressed(Key::D), keys.pressed(Key::A)) {
             (true, true) => 0.0,
@@ -28,8 +32,8 @@ impl<'a> System<'a> for ControllerSys {
             false => 0.0,
         };
 
-        for (_controller, transform) in (&controllers, &mut transforms).join() {
-            transform.vel += Vec2::new(horizontal, vertical);
+        for (_controller, rigid_body) in (&controllers, &rigid_bodies).join() {
+            physics.write_rigid_body(rigid_body).apply_force(0, &Force::linear(Vector2::new(horizontal, vertical)), ForceType::Impulse, true);
         }
     }
 }

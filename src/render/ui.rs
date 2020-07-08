@@ -1,12 +1,15 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::VecDeque;
+
+use nalgebra::Vector2;
+
 use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage};
 
 use crate::render::{Renderer, CameraRes};
-use crate::physics::TransformCom;
-use crate::misc::vec::Vec2;
+use crate::misc::TransformCom;
 use crate::input::MouseRes;
+use crate::misc::Convertable;
 
 pub struct UISys<T: Renderer> {
     pub renderer: Rc<RefCell<T>>
@@ -28,7 +31,7 @@ impl<'a, T: Renderer> System<'a> for UISys<T> {
             let dim = button.dim;
             self.renderer.borrow_mut().render_ss(&button.sprite, pos, dim, camera.screen);
             match mouse.0 {
-                Some(Vec2 { x, y }) if pos.x < x && x < pos.x + dim.x && pos.y < y && y < pos.y + dim.y => events.0.push_back(UIEvent::new(&button.element_name, 1)),
+                Some(m) if pos.x < m.x && m.x < pos.x + dim.x && pos.y < m.y && m.y < pos.y + dim.y => events.0.push_back(UIEvent::new(&button.element_name, 1)),
                 Some(_) | None => ()
             }
         }
@@ -72,11 +75,11 @@ pub struct UIEventRes (pub VecDeque<UIEvent>);
 pub struct TextUICom {
     pub text: String,
     pub font: String,
-    pub dim: Vec2<u32>
+    pub dim: Vector2<u32>
 }
 
 impl TextUICom {
-    pub fn new(text: &str, font: &str, dim: Vec2<u32>) -> Self {
+    pub fn new(text: &str, font: &str, dim: Vector2<u32>) -> Self {
         Self {
             text: text.to_string(),
             font: font.to_string(),
@@ -90,12 +93,12 @@ impl TextUICom {
 pub struct ButtonUICom {
     pub sprite: String,
     pub sprite_pressed: String,
-    pub dim: Vec2<u32>,
+    pub dim: Vector2<u32>,
     pub element_name: String
 }
 
 impl ButtonUICom {
-    pub fn new(sprite: &str, sprite_pressed: &str, dim: Vec2<u32>, element_name: &str) -> Self {
+    pub fn new(sprite: &str, sprite_pressed: &str, dim: Vector2<u32>, element_name: &str) -> Self {
         Self {
             sprite: sprite.to_string(),
             sprite_pressed: sprite_pressed.to_string(),

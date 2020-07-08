@@ -1,107 +1,140 @@
-pub mod colliders;
 pub mod controller;
-pub mod forces;
 
-use specs::{NullStorage, VecStorage, Component, ReadStorage, WriteStorage, Read, Entities, System, Join, Entity};
-use vitrellogy_macro::DefaultConstructor;
+use specs::*;
+use specs::storage::ComponentEvent;
 
-use crate::misc::vec::Vec2;
-use crate::physics::colliders::{ColliderAABBCom, aabb_intersection};
+use nalgebra::{Isometry2, Vector2};
+use nphysics2d::object::*;
+use nphysics2d::force_generator::DefaultForceGeneratorSet;
+use nphysics2d::joint::DefaultJointConstraintSet;
+use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
+use ncollide2d::shape::{ShapeHandle, Shape, Cuboid};
 
-#[derive(Component, Debug, Clone, DefaultConstructor)]
+use crate::misc::TransformCom;
+
+#[derive(Component, Debug)]
 #[storage(VecStorage)]
-pub struct TransformCom {
-    pub pos: Vec2<f32>,
-    pub vel: Vec2<f32>
-}
+pub struct RigidBodyCom(DefaultBodyHandle);
 
-impl TransformCom {
-    pub fn new_pos(pos: Vec2<f32>) -> Self {
-        Self {
-            pos: pos,
-            vel: Vec2::new(0.0, 0.0)
-        }
-    }
+#[derive(Component, Debug)]
+#[storage(VecStorage)]
+pub struct ColliderCom(DefaultColliderHandle);
 
-    pub fn new_null() -> Self {
-        Self {
-            pos: Vec2::new(0.0, 0.0),
-            vel: Vec2::new(0.0, 0.0)
-        }
+
+impl Default for RigidBodyCom {
+    fn default() -> Self {
+        Self(DefaultBodyHandle::from_raw_parts(0, 0))
     }
 }
-
-#[derive(Default, Debug, DefaultConstructor)]
-pub struct DeltaTimeRes(pub f32);
 
 pub struct PhysicsSys {
-    update: Vec<(Entity, Vec2<f32>, bool, bool)>
+    external_transforms: BitSet,
+    transform_event_reader: Option<ReaderId<ComponentEvent>>,
 }
 
 impl<'a> System<'a> for PhysicsSys {
-    type SystemData = (Entities<'a>,
-        Read<'a, DeltaTimeRes>,
+    type SystemData = (Write<'a, PhysicsRes>,
         WriteStorage<'a, TransformCom>,
-        ReadStorage<'a, ColliderAABBCom>,
-        ReadStorage<'a, DynamicCom>,
-        ReadStorage<'a, KinematicCom>);
+        ReadStorage<'a, RigidBodyCom>,
+        ReadStorage<'a, ColliderCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (entities, delta_time, mut transforms, colliders_aabb, dynamic_flags, kinematic_flags) = data;
-        let delta_time = delta_time.0;
+        let (mut physics, mut transforms, rigid_bodies, _colliders) = data;
+        let delta_time = physics.delta_time;
 
-        self.update.clear();
-
-        for (entity, collider_aabb, transform, _dynamic) in (&entities, &colliders_aabb, &transforms, &dynamic_flags).join() {
-            let new_pos = transform.pos + (transform.vel * delta_time);
-            let new_pos_x = transform.pos + (Vec2::new(transform.vel.x, 0.0) * delta_time);
-            let new_pos_y = transform.pos + (Vec2::new(0.0, transform.vel.y) * delta_time);
-
-            let mut intersecting = (false, false);
-            for (other_entity, other_collider_aabb, other_transform) in (&entities, &colliders_aabb, &transforms).join() {
-                if entity != other_entity && aabb_intersection(new_pos, collider_aabb.dim, other_transform.pos, other_collider_aabb.dim) {
-                    intersecting.0 |= aabb_intersection(new_pos_x, collider_aabb.dim, other_transform.pos, other_collider_aabb.dim);
-                    intersecting.1 |= aabb_intersection(new_pos_y, collider_aabb.dim, other_transform.pos, other_collider_aabb.dim);
-                }
-            }
-
-            match intersecting {
-                (false, false) => self.update.push((entity, new_pos, false, false)),
-                (false, true) => self.update.push((entity, new_pos_x, false, true)),
-                (true, false) => self.update.push((entity, new_pos_y, true, false)),
-                (true, true) => ()
+        self.external_transforms.clear();
+        let transform_events = transforms.channel().read(self.transform_event_reader.as_mut().unwrap());
+        for event in transform_events {
+            match event {
+                ComponentEvent::Inserted(id) => { self.external_transforms.add(*id); },
+                ComponentEvent::Modified(_) => (),
+                ComponentEvent::Removed(_) => ()
             }
         }
-
-        for (entity, new_pos, int_x, int_y) in &self.update {
-            let mut transform = transforms.entry(*entity).unwrap().or_insert(TransformCom::new_null());
-            transform.pos = *new_pos;
-            if *int_x {
-                transform.vel.x = 0.0;
-            }
-            if *int_y {
-                transform.vel.y = 0.0;
-            }
+        for (transform, rigid_body, _) in (&transforms, &rigid_bodies, &self.external_transforms).join() {
+            physics.write_rigid_body(rigid_body).set_position(Isometry2::new(transform.pos, 0.0));
         }
 
-        for (transform, _kinematic) in (&mut transforms, &kinematic_flags).join() {
-            transform.pos += transform.vel * delta_time;
+        physics.m_world.set_timestep(delta_time);
+
+        // All components are part of the same struct, so this should be safe
+        unsafe {
+            let m_world: *mut DefaultMechanicalWorld<f32> = &mut physics.m_world;
+            let g_world: *mut DefaultGeometricalWorld<f32> = &mut physics.g_world;
+            let bodies: *mut DefaultBodySet<f32> = &mut physics.bodies;
+            let colliders: *mut DefaultColliderSet<f32> = &mut physics.colliders;
+            let constraints: *mut DefaultJointConstraintSet<f32> = &mut physics.constraints;
+            let forces: *mut DefaultForceGeneratorSet<f32> = &mut physics.forces;
+            (*m_world).step(&mut *g_world, &mut *bodies, &mut *colliders, &mut *constraints, &mut *forces);
         }
+
+        for (transform, rigid_body) in (&mut transforms, &rigid_bodies).join() {
+            transform.pos = physics.read_rigid_body(rigid_body).position().translation.vector; 
+        }
+    }
+
+    fn setup(&mut self, world: &mut World) {
+        Self::SystemData::setup(world);
+        self.transform_event_reader = Some(world.write_component::<TransformCom>().register_reader());
     }
 }
 
 impl PhysicsSys {
     pub fn new() -> Self {
         Self {
-            update: Vec::new()
+            external_transforms: BitSet::new(),
+            transform_event_reader: None
         }
     }
 }
 
-#[derive(Component, Debug, DefaultConstructor, Default)]
-#[storage(NullStorage)]
-pub struct DynamicCom;
+pub struct PhysicsRes {
+    pub delta_time: f32,
+    pub m_world: DefaultMechanicalWorld<f32>,
+    pub g_world: DefaultGeometricalWorld<f32>,
+    pub bodies: DefaultBodySet<f32>,
+    pub colliders: DefaultColliderSet<f32>,
+    pub constraints: DefaultJointConstraintSet<f32>,
+    pub forces: DefaultForceGeneratorSet<f32>
+}
 
-#[derive(Component, Debug, DefaultConstructor, Default)]
-#[storage(NullStorage)]
-pub struct KinematicCom;
+impl Default for PhysicsRes {
+    fn default() -> Self {
+        Self {
+            delta_time: 0.0,
+            m_world: DefaultMechanicalWorld::new(Vector2::new(0.0, -9.81)),
+            g_world: DefaultGeometricalWorld::new(),
+            bodies: DefaultBodySet::new(),
+            colliders: DefaultColliderSet::new(),
+            constraints: DefaultJointConstraintSet::new(),
+            forces: DefaultForceGeneratorSet::new()
+        }
+    }
+}
+
+#[allow(dead_code)]
+impl PhysicsRes {
+    pub fn create_rigid_body(&mut self) -> RigidBodyCom {
+        RigidBodyCom(self.bodies.insert(RigidBodyDesc::new().mass(1.0).build()))
+    }
+
+    pub fn create_rigid_body_static(&mut self) -> RigidBodyCom {
+        RigidBodyCom(self.bodies.insert(RigidBodyDesc::new().status(BodyStatus::Static).build()))
+    }
+
+    pub fn create_collider(&mut self, shape: impl Shape<f32>, rb: &RigidBodyCom) -> ColliderCom {
+        ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(shape)).build(BodyPartHandle(rb.0, 0))))
+    }
+
+    pub fn create_collider_rectangle(&mut self, dim: Vector2<f32>, rb: &RigidBodyCom) -> ColliderCom {
+        ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(Cuboid::new(dim / 2.0))).position(Isometry2::new(dim / 2.0, 0.0)).build(BodyPartHandle(rb.0, 0))))
+    }
+
+    pub fn write_rigid_body(&mut self, rb: &RigidBodyCom) -> &mut RigidBody<f32> {
+        self.bodies.rigid_body_mut(rb.0).unwrap()
+    }
+
+    pub fn read_rigid_body(&self, rb: &RigidBodyCom) -> &RigidBody<f32> {
+        self.bodies.rigid_body(rb.0).unwrap()
+    }
+}
