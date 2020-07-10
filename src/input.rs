@@ -9,32 +9,36 @@ use vitrellogy_macro::DefaultConstructor;
 use crate::input::key::KeysRes;
 use crate::misc::AppStateRes;
 use crate::render::CameraRes;
+use crate::input::sdl::SDLInputImpl;
 
-pub trait Input {
-    fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes);
-}
+#[derive(DefaultConstructor)]
+pub struct InputSys;
 
-pub struct InputSys<T: Input> {
-    pub input: T
-}
-
-impl<'a, T: Input> System<'a> for InputSys<T> {
-    type SystemData = (Write<'a, AppStateRes>,
+impl<'a> System<'a> for InputSys {
+    type SystemData = (WriteExpect<'a, InputRes>,
+        Write<'a, AppStateRes>,
         Write<'a, CameraRes>,
         Write<'a, KeysRes>,
         Write<'a, MouseRes>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut state, mut camera, mut keys, mut mouse) = data;
-        self.input.input(&mut state, &mut camera, &mut keys, &mut mouse);
+        let (mut input, mut state, mut camera, mut keys, mut mouse) = data;
+        input.input(&mut state, &mut camera, &mut keys, &mut mouse);
     }
 }
 
-impl<T: Input> InputSys<T> {
-    pub fn new(input: T) -> Self {
-        Self {
-            input: input
-        }
+pub struct InputRes {
+    pub input: SDLInputImpl
+}
+
+// Do NOT, and I repeat, DO NOT attempt to send -
+unsafe impl Send for InputRes {}
+// - OR SYNC!
+unsafe impl Sync for InputRes {}
+
+impl InputRes {
+    pub fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
+        self.input.input(state, camera, keys, mouse);
     }
 }
 

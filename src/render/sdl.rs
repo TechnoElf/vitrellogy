@@ -10,25 +10,16 @@ use sdl2::ttf::{Sdl2TtfContext, Font};
 
 use nalgebra::Vector2;
 
-use crate::render::Renderer;
 use crate::misc::Convertable;
 
-#[allow(dead_code)]
-struct SDLContext {
-    canvas: Canvas<Window>,
-    image: Sdl2ImageContext,
-    font: Sdl2TtfContext,
-    texture_creator: TextureCreator<WindowContext>,
-}
-
-pub struct SDLRenderer<'a> {
+pub struct SDLRenderImpl<'a> {
     sprite_cache: SpriteCache<'a>,
     font_cache: FontCache<'a>,
     context: SDLContext
 }
 
-impl<'a> Renderer for SDLRenderer<'a> {
-    fn render(&mut self, sprite_name: &str, sprite_pos: Vector2<f32>, sprite_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
+impl SDLRenderImpl<'_> {
+    pub fn render(&mut self, sprite_name: &str, sprite_pos: Vector2<f32>, sprite_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
         // Camera transformation
         let pos_x = (((sprite_pos.x - cam_pos.x) / 5.0 * cam_zoom + 1.0) / 2.0 * cam_screen.x as f32) as i32;
         let pos_y = ((-(sprite_pos.y - cam_pos.y + sprite_dim.y) / 5.0 * cam_zoom * (cam_screen.x as f32 / cam_screen.y as f32) + 1.0) / 2.0 * cam_screen.y as f32) as i32;
@@ -38,7 +29,7 @@ impl<'a> Renderer for SDLRenderer<'a> {
         self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos_x, pos_y, dim_x, dim_y)).unwrap();
     }
 
-    fn write(&mut self, text: &str, font: &str, text_pos: Vector2<f32>, text_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
+    pub fn write(&mut self, text: &str, font: &str, text_pos: Vector2<f32>, text_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
         let (font, color) = self.font_cache.get(font);
 
         let text_surface = font.render(text).blended(color.clone()).unwrap();
@@ -55,14 +46,14 @@ impl<'a> Renderer for SDLRenderer<'a> {
         self.context.canvas.copy(&text_texture, None, Rect::new(pos_x, pos_y, dim_x, dim_y)).unwrap();
     }
 
-    fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vector2<u32>, sprite_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
+    pub fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vector2<u32>, sprite_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
         let pos = Vector2::new(sprite_pos.x, cam_screen.y - (sprite_pos.y + sprite_dim.y)).convert();
         let dim = sprite_dim;
 
         self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }
 
-    fn write_ss(&mut self, text: &str, font: &str, text_pos: Vector2<u32>, text_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
+    pub fn write_ss(&mut self, text: &str, font: &str, text_pos: Vector2<u32>, text_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
         let (font, color) = self.font_cache.get(font);
 
         let text_surface = font.render(text).blended(color.clone()).unwrap();
@@ -76,16 +67,16 @@ impl<'a> Renderer for SDLRenderer<'a> {
         self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }
 
-    fn pre(&mut self) {
+    pub fn pre(&mut self) {
         self.context.canvas.set_draw_color(Color::RGB(50, 50, 60));
         self.context.canvas.clear();
     }
 
-    fn post(&mut self) {
+    pub fn post(&mut self) {
         self.context.canvas.present();
     }
 
-    fn add_sprite(&mut self, name: &str, file: &str) {
+    pub fn add_sprite(&mut self, name: &str, file: &str) {
         // The texture can not outlive the creator as it is part of the same struct, so this should be safe
         let texture_creator = unsafe {
             &*(&self.context.texture_creator as *const TextureCreator<WindowContext>)
@@ -94,7 +85,7 @@ impl<'a> Renderer for SDLRenderer<'a> {
         self.sprite_cache.insert(name.to_string(), texture_creator.load_texture(file).unwrap());
     }
 
-    fn add_font(&mut self, name: &str, file: &str, size: u16, red: u8, green: u8, blue: u8) {
+    pub fn add_font(&mut self, name: &str, file: &str, size: u16, red: u8, green: u8, blue: u8) {
         // The font can not outlive the creator as it is part of the same struct, so this should be safe
         let font_context = unsafe {
             &*(&self.context.font as *const Sdl2TtfContext)
@@ -102,10 +93,8 @@ impl<'a> Renderer for SDLRenderer<'a> {
 
         self.font_cache.insert(name.to_string(), font_context.load_font(file, size).unwrap(), Color::RGB(red, green, blue));
     }
-}
 
-impl SDLRenderer<'_> {
-    pub fn init<'a>(sdl_context: &'a Sdl, win_dim: Vector2<u32>) -> SDLRenderer<'a> {
+    pub fn init<'a>(sdl_context: &'a Sdl, win_dim: Vector2<u32>) -> Self {
         let sdl_image_context = sdl2::image::init(InitFlag::PNG).unwrap();
         let sdl_font_context = sdl2::ttf::init().unwrap();
 
@@ -129,17 +118,24 @@ impl SDLRenderer<'_> {
 
         let context = SDLContext {
             canvas: canvas,
-            image: sdl_image_context,
+            _image: sdl_image_context,
             font: sdl_font_context,
             texture_creator: texture_creator
         };
 
-        SDLRenderer {
+        Self {
             sprite_cache: SpriteCache::new(),
             font_cache: FontCache::new(),
             context: context,
         }
     }
+}
+
+struct SDLContext {
+    canvas: Canvas<Window>,
+    _image: Sdl2ImageContext,
+    font: Sdl2TtfContext,
+    texture_creator: TextureCreator<WindowContext>,
 }
 
 struct SpriteCache<'a> {

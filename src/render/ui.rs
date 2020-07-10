@@ -1,35 +1,34 @@
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::collections::VecDeque;
 
 use nalgebra::Vector2;
 
-use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage};
+use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage, WriteExpect};
 
-use crate::render::{Renderer, CameraRes};
+use vitrellogy_macro::DefaultConstructor;
+use crate::render::{RenderRes, CameraRes};
 use crate::misc::TransformCom;
 use crate::input::MouseRes;
 use crate::misc::Convertable;
 
-pub struct UISys<T: Renderer> {
-    pub renderer: Rc<RefCell<T>>
-}
+#[derive(DefaultConstructor)]
+pub struct UISys;
 
-impl<'a, T: Renderer> System<'a> for UISys<T> {
+impl<'a> System<'a> for UISys {
     type SystemData = (Read<'a, CameraRes>,
         Read<'a, MouseRes>,
         Write<'a, UIEventRes>,
+        WriteExpect<'a, RenderRes>,
         ReadStorage<'a, TextUICom>,
         ReadStorage<'a, ButtonUICom>,
         ReadStorage<'a, TransformCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (camera, mouse, mut events, text_labels, buttons, transforms) = data;
+        let (camera, mouse, mut events, mut renderer, text_labels, buttons, transforms) = data;
 
         for (button, transform) in (&buttons, &transforms).join() {
             let pos = transform.pos.convert();
             let dim = button.dim;
-            self.renderer.borrow_mut().render_ss(&button.sprite, pos, dim, camera.screen);
+            renderer.render_ss(&button.sprite, pos, dim, camera.screen);
             match mouse.0 {
                 Some(m) if pos.x < m.x && m.x < pos.x + dim.x && pos.y < m.y && m.y < pos.y + dim.y => events.0.push_back(UIEvent::new(&button.element_name, 1)),
                 Some(_) | None => ()
@@ -37,18 +36,10 @@ impl<'a, T: Renderer> System<'a> for UISys<T> {
         }
 
         for (text_label, transform) in (&text_labels, &transforms).join() {
-            self.renderer.borrow_mut().write_ss(&text_label.text, &text_label.font, transform.pos.convert(), text_label.dim, camera.screen);
+            renderer.write_ss(&text_label.text, &text_label.font, transform.pos.convert(), text_label.dim, camera.screen);
         }
 
-        self.renderer.borrow_mut().post();
-    }
-}
-
-impl<T: Renderer> UISys<T> {
-    pub fn new(renderer: Rc<RefCell<T>>) -> Self {
-        Self {
-            renderer: renderer
-        }
+        renderer.post();
     }
 }
 
