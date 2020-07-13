@@ -1,4 +1,6 @@
 use std::fmt::Debug;
+use std::collections::HashMap;
+use std::any::{Any, TypeId};
 
 use num_traits::cast::{NumCast, cast};
 
@@ -8,19 +10,43 @@ use specs::{FlaggedStorage, VecStorage, Component};
 
 use vitrellogy_macro::DefaultConstructor;
 
-#[derive(Default, Debug, DefaultConstructor)]
-pub struct AppStateRes(pub AppState);
+pub struct StateRes(HashMap<String, Box<dyn State>>);
+
+pub trait State: Any + Send + Sync + 'static {
+    fn get_type(&self) -> TypeId;
+}
+
+impl<T: Any + Send + Sync + 'static> State for T {
+    fn get_type(&self) -> TypeId {
+        TypeId::of::<T>()
+    }
+}
+
+#[allow(dead_code)]
+impl StateRes {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn insert<T: State>(&mut self, name: &str, val: T) {
+        self.0.insert(name.to_string(), Box::new(val));
+    }
+
+    pub fn get<T: State>(&self, name: &str) -> Option<&T> {
+        self.0.get(name).map(Box::as_ref).and_then(|r| if r.get_type() == TypeId::of::<T>() {
+            unsafe {
+                Some(&*(r as *const dyn State as *const T))
+            }
+        } else {
+            None
+        })
+    }
+}
 
 #[derive(Debug)]
 pub enum AppState {
     Running,
     Stopping
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        AppState::Running
-    }
 }
 
 #[derive(Debug, Clone, DefaultConstructor)]

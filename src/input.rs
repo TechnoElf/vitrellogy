@@ -7,7 +7,7 @@ use specs::prelude::*;
 
 use vitrellogy_macro::DefaultConstructor;
 use crate::input::key::KeysRes;
-use crate::misc::AppStateRes;
+use crate::misc::StateRes;
 use crate::render::CameraRes;
 use crate::input::sdl::SDLInputImpl;
 
@@ -16,7 +16,7 @@ pub struct InputSys;
 
 impl<'a> System<'a> for InputSys {
     type SystemData = (WriteExpect<'a, InputRes>,
-        Write<'a, AppStateRes>,
+        WriteExpect<'a, StateRes>,
         Write<'a, CameraRes>,
         Write<'a, KeysRes>,
         Write<'a, MouseRes>);
@@ -37,7 +37,7 @@ unsafe impl Send for InputRes {}
 unsafe impl Sync for InputRes {}
 
 impl InputRes {
-    pub fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
+    pub fn input(&mut self, state: &mut StateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
         self.input.input(state, camera, keys, mouse);
     }
 }

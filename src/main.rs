@@ -9,7 +9,7 @@ use nphysics2d::joint::DefaultJointConstraintSet;
 use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
 
 mod misc;
-use misc::{AppState, AppStateRes, TransformCom};
+use misc::{AppState, TransformCom, StateRes};
 
 mod render;
 use render::{RenderRes, SpriteCom, SpriteRenderSys, CameraRes, CameraCom, CameraSys, TextRenderSys, TextCom};
@@ -47,6 +47,7 @@ fn main() {
         constraints: DefaultJointConstraintSet::new(),
         forces: DefaultForceGeneratorSet::new()
     };
+    let mut state = StateRes::new();
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
     render.add_sprite("tree", "assets/placeholder/sprites/tree.png");
@@ -56,6 +57,8 @@ fn main() {
     render.add_font("caveat", "assets/placeholder/fonts/caveat.ttf", 64, 10, 10, 10);
     render.add_font("nemoy", "assets/placeholder/fonts/nemoy.otf", 64, 200, 128, 255);
     render.add_font("patrickhand", "assets/placeholder/fonts/patrickhand.ttf", 64, 255, 255, 255);
+
+    state.insert("app", AppState::Running);
 
     // Initialise systems and set up the game world
     let sprite_renderer = SpriteRenderSys::new();
@@ -151,7 +154,6 @@ fn main() {
         .with(col).build();
 
     // Add resources
-    world.insert(AppStateRes::new(AppState::Running));
     world.insert(KeysRes::new());
     world.insert(MouseRes::new(None));
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));
@@ -159,6 +161,7 @@ fn main() {
     world.insert(render);
     world.insert(input);
     world.insert(physics);
+    world.insert(state);
 
     let target_frame_rate = 60.0;
     let target_frame_time = 1.0 / target_frame_rate;
@@ -185,7 +188,7 @@ fn main() {
         }
 
         // Check if the game has been quit
-        match world.read_resource::<AppStateRes>().0 {
+        match world.read_resource::<StateRes>().get("app").unwrap() {
             AppState::Stopping => break,
             _ => {}
         }

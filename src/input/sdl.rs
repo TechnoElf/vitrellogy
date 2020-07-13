@@ -6,7 +6,7 @@ use nalgebra::Vector2;
 
 use crate::input::MouseRes;
 use crate::input::key::{KeysRes, Key};
-use crate::misc::{AppStateRes, AppState};
+use crate::misc::{StateRes, AppState};
 use crate::render::CameraRes;
 
 pub struct SDLInputImpl {
@@ -14,11 +14,11 @@ pub struct SDLInputImpl {
 }
 
 impl SDLInputImpl {
-    pub fn input(&mut self, state: &mut AppStateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
+    pub fn input(&mut self, state: &mut StateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
         mouse.0 = None;
         for event in self.context.events.poll_iter() {
             match event {
-                Event::Quit {..} => state.0 = AppState::Stopping,
+                Event::Quit {..} => state.insert("app", AppState::Stopping),
                 Event::Window { win_event: e, .. } => {
                     match e {
                         WindowEvent::Resized(w, h) => camera.screen = Vector2::new(w as u32, h as u32),

@@ -10,6 +10,7 @@ rand = "0.7.3"
 nalgebra = "0.20"
 ncollide2d = "0.22"
 nphysics2d = "0.14"
+mopa = "0.2.2"
 
 [dependencies.sdl2]
 version = "0.33.0"
