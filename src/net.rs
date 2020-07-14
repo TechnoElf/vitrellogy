@@ -2,80 +2,89 @@ pub mod client;
 pub mod packet;
 
 use std::net::{IpAddr, Ipv4Addr};
-use std::sync::{Arc, Mutex};
 use vitrellogy_macro::DefaultConstructor;
-use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Write};
+use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Write, Entities, WriteExpect};
 
 use crate::misc::TransformCom;
 use crate::net::client::NetworkClient;
 use crate::net::packet::{Packet, TransformPacket};
 use crate::render::ui::UIEventRes;
 
-#[derive(Component, Debug, DefaultConstructor, Default)]
-#[storage(NullStorage)]
-pub struct SyncTransformCom;
-
-#[derive(Component, Debug, DefaultConstructor, Default)]
-#[storage(NullStorage)]
-pub struct RemoteTransformCom;
-
 #[derive(DefaultConstructor)]
-pub struct NetworkSyncSys {
-    client: Arc<Mutex<NetworkClient>>
+pub struct NetworkRes {
+    pub dirty: bool,
+    pub open: bool,
+    pub hosting: bool,
+    pub remote: (u8, u8, u8, u8),
+    pub client: NetworkClient
 }
 
+#[derive(DefaultConstructor)]
+pub struct NetworkSyncSys;
+
 impl<'a> System<'a> for NetworkSyncSys {
-    type SystemData = (Write<'a, NetworkRes>,
+    type SystemData = (Entities<'a>,
+        WriteExpect<'a, NetworkRes>,
         Write<'a, UIEventRes>,
-        ReadStorage<'a, SyncTransformCom>,
-        ReadStorage<'a, RemoteTransformCom>,
+        ReadStorage<'a, NetMasterTransformCom>,
+        ReadStorage<'a, NetSlaveTransformCom>,
         WriteStorage<'a, TransformCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut config, mut ui_events, sync_transform_flags, _remote_transform_flags, mut transforms) = data;
-        let mut client = self.client.lock().unwrap();
+        let (mut entities, mut net, mut ui_events, master_transform_flags, slave_transform_flags, mut transforms) = data;
 
         for i in 0..ui_events.0.len() {
             match ui_events.0.get(i).unwrap().element_name.as_str() {
                 "net_connect" => {
                     println!("Connecting!");
-                    config.hosting = false;
-                    config.dirty = true;
+                    net.hosting = false;
+                    net.dirty = true;
                     ui_events.0.remove(i);
                 },
                 _ => ()
             }
         }
 
-        let data = client.receive();
+        let data = net.client.receive();
         if data.len() > 0 {
-             println!("Received: {:?}", data);
+            for packet in data {
+                match packet {
+                    Packet::Transform(TransformPacket { transform: t }) => {
+                        for (_slave_transform, transform) in (&slave_transform_flags, &mut transforms).join() {
+                            transform.pos = t.pos;
+                        }
+                    },
+                    _ => ()
+                }
+            }
         }
 
-        for (_sync_transform, transform) in (&sync_transform_flags, &mut transforms).join() {
-            client.broadcast(Packet::Transform(TransformPacket::new(transform.clone()))).unwrap();
+        for (_master_transform, transform) in (&master_transform_flags, &mut transforms).join() {
+            net.client.broadcast(Packet::Transform(TransformPacket::new(transform.clone()))).unwrap();
         }
 
-        if config.dirty {
-            if config.open {
-                client.open();
-                if !config.hosting {
-                    if client.connect(IpAddr::V4(Ipv4Addr::new(config.remote.0, config.remote.1, config.remote.2, config.remote.3))).is_err() {
+        if net.dirty {
+            if net.open {
+                net.client.open();
+                if !net.hosting {
+                    let remote = net.remote;
+                    if net.client.connect(IpAddr::V4(Ipv4Addr::new(remote.0, remote.1, remote.2, remote.3))).is_err() {
                         println!("Could not connect to remote client");
                     }
                 }
             } else {
-                client.close();
+                net.client.close();
             }
-            config.dirty = false;
+            net.dirty = false;
         }
     }
 }
 
-#[derive(Default, Debug, DefaultConstructor)]
-pub struct NetworkRes {
-    pub dirty: bool,
-    pub open: bool,
-    pub hosting: bool,
-    pub remote: (u8, u8, u8, u8)
-}
+#[derive(Component, Debug, DefaultConstructor, Default)]
+#[storage(NullStorage)]
+pub struct NetMasterTransformCom;
+
+#[derive(Component, Debug, DefaultConstructor, Default)]
+#[storage(NullStorage)]
+pub struct NetSlaveTransformCom;
+

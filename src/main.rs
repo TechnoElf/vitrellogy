@@ -1,5 +1,4 @@
 use std::time::Instant;
-use std::sync::{Arc, Mutex};
 use specs::prelude::*;
 
 use nalgebra::Vector2;
@@ -26,7 +25,7 @@ use physics::{PhysicsSys, PhysicsRes};
 use physics::controller::{ControllerCom, ControllerSys};
 
 mod net;
-use net::{SyncTransformCom, NetworkSyncSys, NetworkRes};
+use net::{NetMasterTransformCom, NetSlaveTransformCom, NetworkSyncSys, NetworkRes};
 use net::client::NetworkClient;
 
 fn main() {
@@ -47,6 +46,13 @@ fn main() {
         constraints: DefaultJointConstraintSet::new(),
         forces: DefaultForceGeneratorSet::new()
     };
+    let net = NetworkRes {
+        dirty: true,
+        open: true,
+        hosting: true, 
+        remote: (127, 0, 0, 1),
+        client: NetworkClient::new().unwrap()
+    };
     let mut state = StateRes::new();
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
@@ -65,8 +71,7 @@ fn main() {
     let text_renderer = TextRenderSys::new();
     let ui_renderer = UISys::new();
     let input_sys = InputSys::new();
-    let shared_network = Arc::new(Mutex::new(NetworkClient::new().unwrap()));
-    let network_sync = NetworkSyncSys::new(Arc::clone(&shared_network));
+    let network_sync = NetworkSyncSys::new();
     let controller_sys = ControllerSys::new();
     let camera_sys = CameraSys::new();
     let physics_sys = PhysicsSys::new();
@@ -149,7 +154,15 @@ fn main() {
         .with(TransformCom::new(Vector2::new(0.0, 1.0)))
         .with(ControllerCom::new())
         .with(CameraCom::new(Vector2::new(1.0, 1.0)))
-	    .with(SyncTransformCom::new())
+	    .with(NetMasterTransformCom::new())
+        .with(rb)
+        .with(col).build();
+
+    let rb = physics.create_rigid_body_static();
+    let col = physics.create_collider_rectangle(Vector2::new(2.0, 2.0), &rb);
+    world.create_entity().with(SpriteCom::new("wizard", Vector2::new(2.0, 2.0)))
+        .with(TransformCom::new(Vector2::new(0.0, 10.0)))
+	    .with(NetSlaveTransformCom::new())
         .with(rb)
         .with(col).build();
 
@@ -157,7 +170,7 @@ fn main() {
     world.insert(KeysRes::new());
     world.insert(MouseRes::new(None));
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));
-    world.insert(NetworkRes::new(true, true, false, (127, 0, 0, 1)));
+    world.insert(net);
     world.insert(render);
     world.insert(input);
     world.insert(physics);
@@ -179,6 +192,7 @@ fn main() {
 
         if delta_time > target_frame_time + 0.001 {
             println!("dt={}", delta_time);
+            delta_time = 0.0;
         }
 
         // Update the delta time resource in a block so rust doesn't complain about multiple borrows

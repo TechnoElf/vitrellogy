@@ -47,7 +47,7 @@ impl<'a> System<'a> for PhysicsSys {
         for event in transform_events {
             match event {
                 ComponentEvent::Inserted(id) => { self.external_transforms.add(*id); },
-                ComponentEvent::Modified(_) => (),
+                ComponentEvent::Modified(id) => { self.external_transforms.add(*id); },
                 ComponentEvent::Removed(_) => ()
             }
         }
