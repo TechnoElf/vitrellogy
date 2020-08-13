@@ -33,7 +33,10 @@ impl<'a> System<'a> for ControllerSys {
         };
 
         for (_controller, rigid_body) in (&controllers, &rigid_bodies).join() {
-            physics.write_rigid_body(rigid_body).apply_force(0, &Force::linear(Vector2::new(horizontal, vertical)), ForceType::Impulse, true);
+            match physics.write_rigid_body(rigid_body) {
+                Some(rb) => rb.apply_force(0, &Force::linear(Vector2::new(horizontal, vertical)), ForceType::Impulse, true),
+                None => ()
+            }
         }
     }
 }

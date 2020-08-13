@@ -16,8 +16,7 @@ use render::sdl::SDLRenderImpl;
 use render::ui::{UISys, TextUICom, ButtonUICom};
 
 mod input;
-use input::{InputSys, MouseRes, InputRes};
-use input::key::KeysRes;
+use input::{InputSys, InputRes};
 use input::sdl::SDLInputImpl;
 
 mod physics;
@@ -25,8 +24,7 @@ use physics::{PhysicsSys, PhysicsRes};
 use physics::controller::{ControllerCom, ControllerSys};
 
 mod net;
-use net::{NetMasterTransformCom, NetSlaveTransformCom, NetworkSyncSys, NetworkRes};
-use net::client::NetworkClient;
+use net::{NetMasterTransformCom, NetworkSyncSys, NetworkRes};
 
 fn main() {
     // Initialise resources
@@ -46,13 +44,7 @@ fn main() {
         constraints: DefaultJointConstraintSet::new(),
         forces: DefaultForceGeneratorSet::new()
     };
-    let net = NetworkRes {
-        dirty: true,
-        open: true,
-        hosting: true, 
-        remote: (127, 0, 0, 1),
-        client: NetworkClient::new().unwrap()
-    };
+    let net = NetworkRes::new();
     let mut state = StateRes::new();
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
@@ -101,13 +93,17 @@ fn main() {
         world.create_entity().with(SpriteCom::new("b", Vector2::new(1.0, 1.0)))
             .with(TransformCom::new(Vector2::new(pos as f32, 0.0))).build();
     }
-    for pos in 0..5 {
+    for pos in 0..18 {
         world.create_entity().with(SpriteCom::new("b", Vector2::new(1.0, 1.0)))
             .with(TransformCom::new(Vector2::new(0.0, pos as f32))).build();
     }
-    for pos in 0..5 {
+    for pos in 0..18 {
         world.create_entity().with(SpriteCom::new("b", Vector2::new(1.0, 1.0)))
             .with(TransformCom::new(Vector2::new(19.0, pos as f32))).build();
+    }
+    for pos in 0..20 {
+        world.create_entity().with(SpriteCom::new("b", Vector2::new(1.0, 1.0)))
+            .with(TransformCom::new(Vector2::new(pos as f32, 18.0))).build();
     }
 
     let rb = physics.create_rigid_body_static();
@@ -121,13 +117,18 @@ fn main() {
         .with(rb)
         .with(col).build();
     let rb = physics.create_rigid_body_static();
-    let col = physics.create_collider_rectangle(Vector2::new(1.0, 5.0), &rb);
+    let col = physics.create_collider_rectangle(Vector2::new(1.0, 18.0), &rb);
     world.create_entity().with(TransformCom::new(Vector2::new(0.0, 0.0)))
         .with(rb)
         .with(col).build();
     let rb = physics.create_rigid_body_static();
-    let col = physics.create_collider_rectangle(Vector2::new(1.0, 5.0), &rb);
+    let col = physics.create_collider_rectangle(Vector2::new(1.0, 18.0), &rb);
     world.create_entity().with(TransformCom::new(Vector2::new(19.0, 0.0)))
+        .with(rb)
+        .with(col).build();
+    let rb = physics.create_rigid_body_static();
+    let col = physics.create_collider_rectangle(Vector2::new(20.0, 1.0), &rb);
+    world.create_entity().with(TransformCom::new(Vector2::new(0.0, 18.0)))
         .with(rb)
         .with(col).build();
 
@@ -142,11 +143,20 @@ fn main() {
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vector2::new(1.0, 1.0)))
         .with(TransformCom::new(Vector2::new(7.0, 5.0))).build();
 
-    world.create_entity().with(ButtonUICom::new("g", "r", Vector2::new(200, 50), "net_connect"))
-        .with(TransformCom::new(Vector2::new(0.0, 0.0))).build();
+    world.create_entity().with(ButtonUICom::new("r", "g", Vector2::new(120, 50), "net_connect"))
+        .with(TransformCom::new(Vector2::new(10.0, 10.0))).build();
+    world.create_entity().with(TextUICom::new("Connect", "caveat", Vector2::new(120, 50)))
+        .with(TransformCom::new(Vector2::new(10.0, 10.0))).build();
 
-    world.create_entity().with(TextUICom::new("Connect", "caveat", Vector2::new(200, 50)))
-        .with(TransformCom::new(Vector2::new(0.0, 0.0))).build();
+    world.create_entity().with(ButtonUICom::new("g", "b", Vector2::new(120, 50), "net_host"))
+        .with(TransformCom::new(Vector2::new(10.0, 70.0))).build();
+    world.create_entity().with(TextUICom::new("Host", "caveat", Vector2::new(120, 50)))
+        .with(TransformCom::new(Vector2::new(10.0, 70.0))).build();
+
+    world.create_entity().with(ButtonUICom::new("b", "r", Vector2::new(120, 50), "debug"))
+        .with(TransformCom::new(Vector2::new(10.0, 130.0))).build();
+    world.create_entity().with(TextUICom::new("Debug", "caveat", Vector2::new(120, 50)))
+        .with(TransformCom::new(Vector2::new(10.0, 130.0))).build();
 
     let rb = physics.create_rigid_body();
     let col = physics.create_collider_rectangle(Vector2::new(2.0, 2.0), &rb);
@@ -158,17 +168,7 @@ fn main() {
         .with(rb)
         .with(col).build();
 
-    let rb = physics.create_rigid_body_static();
-    let col = physics.create_collider_rectangle(Vector2::new(2.0, 2.0), &rb);
-    world.create_entity().with(SpriteCom::new("wizard", Vector2::new(2.0, 2.0)))
-        .with(TransformCom::new(Vector2::new(0.0, 10.0)))
-	    .with(NetSlaveTransformCom::new())
-        .with(rb)
-        .with(col).build();
-
     // Add resources
-    world.insert(KeysRes::new());
-    world.insert(MouseRes::new(None));
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));
     world.insert(net);
     world.insert(render);
@@ -191,7 +191,7 @@ fn main() {
         time = Instant::now();
 
         if delta_time > target_frame_time + 0.001 {
-            println!("dt={}", delta_time);
+            //println!("dt={}", delta_time);
             delta_time = 0.0;
         }
 

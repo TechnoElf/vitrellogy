@@ -14,11 +14,11 @@ use crate::misc::TransformCom;
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
-pub struct RigidBodyCom(DefaultBodyHandle);
+pub struct RigidBodyCom(pub DefaultBodyHandle);
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
-pub struct ColliderCom(DefaultColliderHandle);
+pub struct ColliderCom(pub DefaultColliderHandle);
 
 
 impl Default for RigidBodyCom {
@@ -52,7 +52,10 @@ impl<'a> System<'a> for PhysicsSys {
             }
         }
         for (transform, rigid_body, _) in (&transforms, &rigid_bodies, &self.external_transforms).join() {
-            physics.write_rigid_body(rigid_body).set_position(Isometry2::new(transform.pos, 0.0));
+            match physics.write_rigid_body(rigid_body) {
+                Some(rb) => rb.set_position(Isometry2::new(transform.pos, 0.0)),
+                None => ()
+            }
         }
 
         physics.m_world.set_timestep(delta_time);
@@ -69,7 +72,10 @@ impl<'a> System<'a> for PhysicsSys {
         }
 
         for (transform, rigid_body) in (&mut transforms, &rigid_bodies).join() {
-            transform.pos = physics.read_rigid_body(rigid_body).position().translation.vector; 
+            match physics.read_rigid_body(rigid_body) {
+                Some(rb) => transform.pos = rb.position().translation.vector,
+                None => ()
+            }
         }
     }
 
@@ -130,11 +136,11 @@ impl PhysicsRes {
         ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(Cuboid::new(dim / 2.0))).position(Isometry2::new(dim / 2.0, 0.0)).build(BodyPartHandle(rb.0, 0))))
     }
 
-    pub fn write_rigid_body(&mut self, rb: &RigidBodyCom) -> &mut RigidBody<f32> {
-        self.bodies.rigid_body_mut(rb.0).unwrap()
+    pub fn write_rigid_body(&mut self, rb: &RigidBodyCom) -> Option<&mut RigidBody<f32>> {
+        self.bodies.rigid_body_mut(rb.0)
     }
 
-    pub fn read_rigid_body(&self, rb: &RigidBodyCom) -> &RigidBody<f32> {
-        self.bodies.rigid_body(rb.0).unwrap()
+    pub fn read_rigid_body(&self, rb: &RigidBodyCom) -> Option<&RigidBody<f32>> {
+        self.bodies.rigid_body(rb.0)
     }
 }

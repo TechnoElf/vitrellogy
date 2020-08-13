@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub struct KeysRes(pub HashMap<Key, bool>);
 
 impl KeysRes {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self(HashMap::new())
     }
