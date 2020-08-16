@@ -12,9 +12,9 @@ ncollide2d = "0.22"
 nphysics2d = "0.14"
 
 [dependencies.sdl2]
-version = "0.33.0"
+version = "0.34.2"
 default-features = false
-features = ["image", "ttf"]
+features = ["image", "ttf", "mixer"]
 
 [dependencies.specs]
 version = "0.16.1"

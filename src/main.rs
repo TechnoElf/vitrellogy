@@ -58,6 +58,12 @@ fn main() {
 
     state.insert("app", AppState::Running);
 
+    // Sound test
+    let _mixer = sdl2::mixer::init(sdl2::mixer::InitFlag::all()).unwrap();
+    sdl2::mixer::open_audio(sdl2::mixer::DEFAULT_FREQUENCY, sdl2::mixer::DEFAULT_FORMAT, sdl2::mixer::DEFAULT_CHANNELS, 512).unwrap();
+    let music = sdl2::mixer::Music::from_file("assets/placeholder/music/you-are-my-hope.ogg").unwrap();
+    music.play(1).unwrap();
+
     // Initialise systems and set up the game world
     let sprite_renderer = SpriteRenderSys::new();
     let text_renderer = TextRenderSys::new();
