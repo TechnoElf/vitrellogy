@@ -26,6 +26,9 @@ use physics::controller::{ControllerCom, ControllerSys};
 mod net;
 use net::{NetMasterTransformCom, NetworkSyncSys, NetworkRes};
 
+mod sound;
+use sound::{SoundRes, SoundSys};
+
 fn main() {
     // Initialise resources
     let sdl_context = sdl2::init().unwrap();
@@ -45,6 +48,7 @@ fn main() {
         forces: DefaultForceGeneratorSet::new()
     };
     let net = NetworkRes::new();
+    let mut sound = SoundRes::new();
     let mut state = StateRes::new();
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
@@ -58,11 +62,7 @@ fn main() {
 
     state.insert("app", AppState::Running);
 
-    // Sound test
-    let _mixer = sdl2::mixer::init(sdl2::mixer::InitFlag::all()).unwrap();
-    sdl2::mixer::open_audio(sdl2::mixer::DEFAULT_FREQUENCY, sdl2::mixer::DEFAULT_FORMAT, sdl2::mixer::DEFAULT_CHANNELS, 512).unwrap();
-    let music = sdl2::mixer::Music::from_file("assets/placeholder/music/you-are-my-hope.ogg").unwrap();
-    music.play(1).unwrap();
+    let bg_music = sound.load_music(&["assets/placeholder/music/you-are-my-hope.ogg", "assets/placeholder/music/windward.ogg", "assets/placeholder/music/baby-bird.ogg", "assets/placeholder/music/loves-vagrant.ogg"]);
 
     // Initialise systems and set up the game world
     let sprite_renderer = SpriteRenderSys::new();
@@ -73,6 +73,7 @@ fn main() {
     let controller_sys = ControllerSys::new();
     let camera_sys = CameraSys::new();
     let physics_sys = PhysicsSys::new();
+    let sound_sys = SoundSys::new(0, bg_music);
     
     let mut dispatcher = DispatcherBuilder::new()
         .with_thread_local(input_sys)
@@ -80,6 +81,7 @@ fn main() {
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
         .with(camera_sys, "camera", &["physics"])
+        .with_thread_local(sound_sys)
         .with_thread_local(sprite_renderer)
         .with_thread_local(text_renderer)
         .with_thread_local(ui_renderer).build();
@@ -180,6 +182,7 @@ fn main() {
     world.insert(render);
     world.insert(input);
     world.insert(physics);
+    world.insert(sound);
     world.insert(state);
 
     let target_frame_rate = 60.0;

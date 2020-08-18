@@ -25,6 +25,7 @@ impl<'a> System<'a> for UISys {
     fn run(&mut self, data: Self::SystemData) {
         let (camera, mouse, mut events, mut renderer, text_labels, buttons, transforms) = data;
 
+        events.0.clear();
         for (button, transform) in (&buttons, &transforms).join() {
             let pos = transform.pos.convert();
             let dim = button.dim;

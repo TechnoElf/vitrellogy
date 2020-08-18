@@ -207,7 +207,7 @@ impl<'a> System<'a> for NetworkSyncSys {
         Read<'a, LazyUpdate>,
         WriteExpect<'a, NetworkRes>,
         Write<'a, NetworkEventRes>,
-        Write<'a, UIEventRes>,
+        Read<'a, UIEventRes>,
         Write<'a, PhysicsRes>,
         ReadStorage<'a, NetMasterTransformCom>,
         ReadStorage<'a, NetSlaveTransformCom>,
@@ -216,10 +216,10 @@ impl<'a> System<'a> for NetworkSyncSys {
         ReadStorage<'a, ColliderCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (entities, updater, mut net, mut net_events, mut ui_events, mut physics, master_transform_flags, slave_transform_flags, mut transforms, rigid_bodies, colliders) = data;
+        let (entities, updater, mut net, mut net_events, ui_events, mut physics, master_transform_flags, slave_transform_flags, mut transforms, rigid_bodies, colliders) = data;
 
-        for i in 0..ui_events.0.len() {
-            match ui_events.0.get(i).unwrap().element_name.as_str() {
+        for event in &ui_events.0 { 
+            match event.element_name.as_ref() {
                 "net_connect" => {
                     net.close();
                     for (entity, _, rb, col) in (&entities, &slave_transform_flags, &rigid_bodies, &colliders).join() {
@@ -236,7 +236,6 @@ impl<'a> System<'a> for NetworkSyncSys {
                         println!("Could not connect to remote client");
                         net.close();
                     }
-                    ui_events.0.remove(i);
                 },
                 "net_host" => {
                     net.close();
@@ -250,11 +249,9 @@ impl<'a> System<'a> for NetworkSyncSys {
                         updater.remove::<ColliderCom>(entity);
                     }
                     net.open().expect("failed to start network client");
-                    ui_events.0.remove(i);
                 },
                 "debug" => {
                     println!("Data for client {}:\n  open: {}\n  hosting: {}\n  host: {}\n  socket: {}\n  peers: {:?}", net.id, net.socket.is_some(), !net.host_id.is_shared(), net.host_id, net.socket.as_ref().map(|s| format!("{:?}", s)).or(Some("".to_string())).unwrap(), net.peers);
-                    ui_events.0.remove(i);
                 },
                 _ => ()
             }
