@@ -100,7 +100,7 @@ impl<'a> System<'a> for SoundSys {
 
         for event in &ui_events.0 {
             match event.element_name.as_ref() {
-                "debug" => {
+                "sound" => {
                     sound.play_music(self.1, self.0 as usize);
                     self.0 += 1;
                     if self.0 > 3 {

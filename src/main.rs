@@ -166,6 +166,11 @@ fn main() {
     world.create_entity().with(TextUICom::new("Debug", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 130.0))).build();
 
+    world.create_entity().with(ButtonUICom::new("r", "g", Vector2::new(120, 50), "sound"))
+        .with(TransformCom::new(Vector2::new(10.0, 190.0))).build();
+    world.create_entity().with(TextUICom::new("Sound", "caveat", Vector2::new(120, 50)))
+        .with(TransformCom::new(Vector2::new(10.0, 190.0))).build();
+
     let rb = physics.create_rigid_body();
     let col = physics.create_collider_rectangle(Vector2::new(2.0, 2.0), &rb);
     world.create_entity().with(SpriteCom::new("wizard", Vector2::new(2.0, 2.0)))

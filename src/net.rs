@@ -2,7 +2,7 @@ pub mod packet;
 
 use std::time::Instant;
 use std::collections::VecDeque;
-use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
 use rand::random;
 use vitrellogy_macro::DefaultConstructor;
 
@@ -38,7 +38,7 @@ impl NetworkRes {
         }
     }
 
-    pub fn broadcast(&self, packet: Packet) -> Result<(), &'static str> {
+    pub fn broadcast(&self, packet: Packet) -> Result<(), String> {
         for (_, socket, _) in &self.peers {
             self.send_packet(&packet, socket)?;
         }
@@ -125,38 +125,38 @@ impl NetworkRes {
         }
     }
 
-    pub fn connect(&mut self, addr: IpAddr) -> Result<(), &'static str> {
+    pub fn connect(&mut self, addr: SocketAddr) -> Result<(), String> {
         if let Some(socket) = &self.socket {
             self.peers.clear();
 
-            let possible_addresses: Vec<SocketAddr> = (0..=9).map(|i| SocketAddr::new(addr, PORT_PREFIX + i)).collect();
+            let possible_addresses: Vec<SocketAddr> = (0..=9).map(|i| SocketAddr::new(addr.ip(), PORT_PREFIX + i)).collect();
             for addr in possible_addresses {
-                if addr != socket.local_addr().or(Err("no socket bound"))? {
+                if addr != socket.local_addr().unwrap() {
                     self.send_packet(&Packet::ConRequest(ConRequestPacket::new()), &addr)?;
                 }
             }
 
             Ok(())
         } else {
-            Err("socket closed")
+            Err("socket closed".to_string())
         }
     }
 
-    pub fn send_packet(&self, p: &Packet, a: &SocketAddr) -> Result<(), &'static str> {
+    pub fn send_packet(&self, p: &Packet, a: &SocketAddr) -> Result<(), String> {
         if let Some(socket) = &self.socket {
-            socket.send_to(&p.into_bytes(), a).or(Err("failed to send packet")).map(|_| ())
+            socket.send_to(&p.into_bytes(), a).map_err(|e| format!("failed to send packet to {}: {}", a, e)).map(|_| ())
         } else {
-            Err("socket closed")
+            Err("socket closed".to_string())
         }
     }
 
-    pub fn receive_packet(&self) -> Result<(Packet, SocketAddr), &'static str> {
+    pub fn receive_packet(&self) -> Result<(Packet, SocketAddr), String> {
         if let Some(socket) = &self.socket {
             let mut buf = [0; PACKET_LENGTH];
-            socket.recv_from(&mut buf).or(Err("could not receive packet")).and_then(|(length, origin_sock)| {
+            socket.recv_from(&mut buf).map_err(|e| format!("could not receive packet: {}", e)).and_then(|(length, origin_sock)| {
                 match length <= PACKET_LENGTH {
                     true => Ok((length, origin_sock)),
-                    false => Err("packet exceeds maximum length")
+                    false => Err("packet exceeds maximum length".to_string())
                 }
             }).map(|(length, origin_sock)| {
                 let mut data: Vec<u8> = Vec::with_capacity(length);
@@ -164,20 +164,20 @@ impl NetworkRes {
                 (Packet::from_bytes(data), origin_sock)
             })
         } else {
-            Err("socket closed")
+            Err("socket closed".to_string())
         }
     }
 
-    pub fn open(&mut self) -> Result<(), &'static str> {
+    pub fn open(&mut self) -> Result<(), String> {
         if self.socket.is_none() {
-            self.socket = Some((0..=9).filter_map(|i| UdpSocket::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), PORT_PREFIX + i)).ok()).next().ok_or("no available ports")?);
-            self.socket.as_mut().unwrap().set_nonblocking(true).or(Err("could not configure socket"))?;
+            self.socket = Some((0..=9).filter_map(|i| UdpSocket::bind(("0.0.0.0", PORT_PREFIX + i)).ok()).next().ok_or("no available ports")?);
+            self.socket.as_mut().unwrap().set_nonblocking(true).map_err(|e| format!("could not configure socket: {}", e))?;
             self.id = NetID::new().init(random());   
             self.host_id = NetID::new();
             self.peers.clear();
             Ok(())
         } else {
-            Err("client is already open")
+            Err("client is already open".to_string())
         }
     }
 
@@ -232,9 +232,12 @@ impl<'a> System<'a> for NetworkSyncSys {
                         updater.remove::<ColliderCom>(entity);
                     }
                     net.open().expect("failed to start network client");
-                    if net.connect(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))).is_err() {
-                        println!("Could not connect to remote client");
-                        net.close();
+                    match net.connect(("apollo.undertheprinter.com", 0).to_socket_addrs().unwrap().next().unwrap()) {
+                        Ok(()) => (),
+                        Err(e) => {
+                            println!("could not connect to remote client: {}", e);
+                            net.close();
+                        }
                     }
                 },
                 "net_host" => {
