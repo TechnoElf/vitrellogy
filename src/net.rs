@@ -2,7 +2,7 @@ pub mod packet;
 
 use std::time::Instant;
 use std::collections::VecDeque;
-use std::net::{UdpSocket, IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
+use std::net::{UdpSocket, SocketAddr, ToSocketAddrs};
 use rand::random;
 use vitrellogy_macro::DefaultConstructor;
 
@@ -26,6 +26,7 @@ pub struct NetworkRes {
     id: NetID,
     host_id: NetID,
     peers: Vec<(NetID, SocketAddr, Instant)>,
+    connecting: bool
 }
 
 impl NetworkRes {
@@ -35,6 +36,7 @@ impl NetworkRes {
             id: NetID::new(),
             host_id: NetID::new(),
             peers: Vec::new(),
+            connecting: false
         }
     }
 
@@ -47,11 +49,14 @@ impl NetworkRes {
 
     pub fn process(&mut self, events: &mut NetworkEventRes) {
         events.0.clear();
+        if self.socket.is_none() {
+            return;
+        }
 
         while let Ok((packet, origin_socket)) = self.receive_packet() {
             match packet {
                 Packet::ConRequest(_) => {
-                    if self.peers.iter().find_map(|(_, socket, _)| if &origin_socket == socket { Some(()) } else { None }).is_none() {
+                    if !self.connecting && self.peers.iter().find_map(|(_, socket, _)| if &origin_socket == socket { Some(()) } else { None }).is_none() {
                         if self.host_id.is_shared() {
                             let host_socket = self.peers.iter().find_map(|(id, socket, _)| if id == &self.host_id { Some(socket) } else { None }).unwrap();
                             self.send_packet(&Packet::ConRedirect(ConRedirectPacket::new(host_socket.clone())), &origin_socket).unwrap();
@@ -72,26 +77,34 @@ impl NetworkRes {
                     }
                 },
                 Packet::ConAcknowledge(p) => {
-                    self.id = p.assigned_id;
-                    self.host_id = p.origin_id;
-                    self.peers.push((p.origin_id, origin_socket, Instant::now()));
-                    events.0.push_back(NetworkEvent::PeerConnected(p.origin_id));
+                    if !self.host_id.is_shared() && self.connecting {
+                        self.id = p.assigned_id;
+                        self.host_id = p.origin_id;
+                        self.peers.push((p.origin_id, origin_socket, Instant::now()));
+                        events.0.push_back(NetworkEvent::PeerConnected(p.origin_id));
+                    }
                 },
                 Packet::ConRedirect(p) => {
-                    self.send_packet(&Packet::ConRequest(ConRequestPacket::new()), &p.host_socket).unwrap();
+                    if !self.host_id.is_shared() {
+                        self.send_packet(&Packet::ConRequest(ConRequestPacket::new()), &p.host_socket).unwrap();
+                    }
                 },
                 Packet::ConNew(p) => {
-                    self.peers.push((p.peer_id, p.socket, Instant::now()));
-                    events.0.push_back(NetworkEvent::PeerConnected(p.peer_id));
+                    if self.host_id.is_shared() {
+                        self.peers.push((p.peer_id, p.socket, Instant::now()));
+                        events.0.push_back(NetworkEvent::PeerConnected(p.peer_id));
+                    }
                 },
                 Packet::ConDelete(p) => {
-                    for i in 0..self.peers.len() {
-                        if p.peer_id == self.peers.get(i).unwrap().0 {
-                            self.peers.remove(i);
-                            break;
+                    if self.host_id.is_shared() {
+                        for i in 0..self.peers.len() {
+                            if p.peer_id == self.peers.get(i).unwrap().0 {
+                                self.peers.remove(i);
+                                break;
+                            }
                         }
+                        events.0.push_back(NetworkEvent::PeerDisconnected(p.peer_id));
                     }
-                    events.0.push_back(NetworkEvent::PeerDisconnected(p.peer_id));
                 },
                 Packet::ConHeartbeat(p) => {
                     self.peers.iter_mut().find_map(|peer| if p.origin_id == peer.0 {
@@ -128,6 +141,7 @@ impl NetworkRes {
     pub fn connect(&mut self, addr: SocketAddr) -> Result<(), String> {
         if let Some(socket) = &self.socket {
             self.peers.clear();
+            self.connecting = true;
 
             let possible_addresses: Vec<SocketAddr> = (0..=9).map(|i| SocketAddr::new(addr.ip(), PORT_PREFIX + i)).collect();
             for addr in possible_addresses {
@@ -175,6 +189,7 @@ impl NetworkRes {
             self.id = NetID::new().init(random());   
             self.host_id = NetID::new();
             self.peers.clear();
+            self.connecting = false;
             Ok(())
         } else {
             Err("client is already open".to_string())
