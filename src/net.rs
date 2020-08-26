@@ -1,7 +1,6 @@
 pub mod packet;
 
 use std::time::Instant;
-use std::collections::VecDeque;
 use std::net::{UdpSocket, SocketAddr, ToSocketAddrs};
 use rand::random;
 use vitrellogy_macro::DefaultConstructor;
@@ -12,7 +11,7 @@ use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Wri
 use specs::world::Builder;
 
 use crate::misc::TransformCom;
-use crate::render::ui::UIEventRes;
+use crate::render::ui::{UIEvent, UIEventQueue};
 use crate::render::SpriteCom;
 use crate::net::packet::*;
 use crate::physics::{PhysicsRes, ColliderCom, RigidBodyCom};
@@ -47,8 +46,8 @@ impl NetworkRes {
         Ok(())
     }
 
-    pub fn process(&mut self, events: &mut NetworkEventRes) {
-        events.0.clear();
+    pub fn process(&mut self, events: &mut NetworkEventQueue) {
+        events.clear();
         if self.socket.is_none() {
             return;
         }
@@ -72,7 +71,7 @@ impl NetworkRes {
                                 self.send_packet(&Packet::ConNew(ConNewPacket::new(assigned_id, origin_socket)), socket).unwrap();
                             }
                             self.peers.push((assigned_id, origin_socket, Instant::now()));
-                            events.0.push_back(NetworkEvent::PeerConnected(assigned_id));
+                            events.push(NetworkEvent::PeerConnected(assigned_id));
                         }
                     }
                 },
@@ -81,7 +80,7 @@ impl NetworkRes {
                         self.id = p.assigned_id;
                         self.host_id = p.origin_id;
                         self.peers.push((p.origin_id, origin_socket, Instant::now()));
-                        events.0.push_back(NetworkEvent::PeerConnected(p.origin_id));
+                        events.push(NetworkEvent::PeerConnected(p.origin_id));
                     }
                 },
                 Packet::ConRedirect(p) => {
@@ -92,7 +91,7 @@ impl NetworkRes {
                 Packet::ConNew(p) => {
                     if self.host_id.is_shared() {
                         self.peers.push((p.peer_id, p.socket, Instant::now()));
-                        events.0.push_back(NetworkEvent::PeerConnected(p.peer_id));
+                        events.push(NetworkEvent::PeerConnected(p.peer_id));
                     }
                 },
                 Packet::ConDelete(p) => {
@@ -103,7 +102,7 @@ impl NetworkRes {
                                 break;
                             }
                         }
-                        events.0.push_back(NetworkEvent::PeerDisconnected(p.peer_id));
+                        events.push(NetworkEvent::PeerDisconnected(p.peer_id));
                     }
                 },
                 Packet::ConHeartbeat(p) => {
@@ -115,7 +114,7 @@ impl NetworkRes {
                     });
                 },
                 Packet::Transform(p) => {
-                    events.0.push_back(NetworkEvent::PeerMoved(p.origin_id, p.transform));
+                    events.push(NetworkEvent::PeerMoved(p.origin_id, p.transform));
                 }
                 _ => ()
             }
@@ -127,7 +126,7 @@ impl NetworkRes {
                 if !self.host_id.is_shared() {
                     let old_id = self.peers.remove(i).0;
                     self.broadcast(Packet::ConDelete(ConDeletePacket::new(old_id))).unwrap();
-                    events.0.push_back(NetworkEvent::PeerDisconnected(old_id));
+                    events.push(NetworkEvent::PeerDisconnected(old_id));
                 } else {
                     i += 1;
                 }
@@ -204,15 +203,13 @@ impl NetworkRes {
     }
 }
 
-#[derive(Debug)]
-pub enum NetworkEvent {
-    PeerConnected(NetID),
-    PeerDisconnected(NetID),
-    PeerMoved(NetID, TransformCom)
+event_queue! {
+    NetworkEventQueue: pub enum NetworkEvent {
+        PeerConnected(NetID),
+        PeerDisconnected(NetID),
+        PeerMoved(NetID, TransformCom)
+    }
 }
-
-#[derive(Default, Debug)]
-pub struct NetworkEventRes (pub VecDeque<NetworkEvent>);
 
 #[derive(DefaultConstructor)]
 pub struct NetworkSyncSys;
@@ -221,8 +218,8 @@ impl<'a> System<'a> for NetworkSyncSys {
     type SystemData = (Entities<'a>,
         Read<'a, LazyUpdate>,
         WriteExpect<'a, NetworkRes>,
-        Write<'a, NetworkEventRes>,
-        Read<'a, UIEventRes>,
+        Write<'a, NetworkEventQueue>,
+        Read<'a, UIEventQueue>,
         Write<'a, PhysicsRes>,
         ReadStorage<'a, NetMasterTransformCom>,
         ReadStorage<'a, NetSlaveTransformCom>,
@@ -233,50 +230,52 @@ impl<'a> System<'a> for NetworkSyncSys {
     fn run(&mut self, data: Self::SystemData) {
         let (entities, updater, mut net, mut net_events, ui_events, mut physics, master_transform_flags, slave_transform_flags, mut transforms, rigid_bodies, colliders) = data;
 
-        for event in &ui_events.0 { 
-            match event.element_name.as_ref() {
-                "net_connect" => {
-                    net.close();
-                    for (entity, _, rb, col) in (&entities, &slave_transform_flags, &rigid_bodies, &colliders).join() {
-                        physics.bodies.remove(rb.0);
-                        physics.colliders.remove(col.0);
-                        updater.remove::<SpriteCom>(entity);
-                        updater.remove::<TransformCom>(entity);
-                        updater.remove::<NetSlaveTransformCom>(entity);
-                        updater.remove::<RigidBodyCom>(entity);
-                        updater.remove::<ColliderCom>(entity);
-                    }
-                    net.open().expect("failed to start network client");
-                    match net.connect(("apollo.undertheprinter.com", 0).to_socket_addrs().unwrap().next().unwrap()) {
-                        Ok(()) => (),
-                        Err(e) => {
-                            println!("could not connect to remote client: {}", e);
-                            net.close();
+        for event in ui_events.iter() { 
+            match event {
+                UIEvent::ButtonPressed { id } => match id.as_ref() {
+                    "net_connect" => {
+                        net.close();
+                        for (entity, _, rb, col) in (&entities, &slave_transform_flags, &rigid_bodies, &colliders).join() {
+                            physics.bodies.remove(rb.0);
+                            physics.colliders.remove(col.0);
+                            updater.remove::<SpriteCom>(entity);
+                            updater.remove::<TransformCom>(entity);
+                            updater.remove::<NetSlaveTransformCom>(entity);
+                            updater.remove::<RigidBodyCom>(entity);
+                            updater.remove::<ColliderCom>(entity);
                         }
-                    }
-                },
-                "net_host" => {
-                    net.close();
-                    for (entity, _, rb, col) in (&entities, &slave_transform_flags, &rigid_bodies, &colliders).join() {
-                        physics.bodies.remove(rb.0);
-                        physics.colliders.remove(col.0);
-                        updater.remove::<SpriteCom>(entity);
-                        updater.remove::<TransformCom>(entity);
-                        updater.remove::<NetSlaveTransformCom>(entity);
-                        updater.remove::<RigidBodyCom>(entity);
-                        updater.remove::<ColliderCom>(entity);
-                    }
-                    net.open().expect("failed to start network client");
-                },
-                "debug" => {
-                    println!("Data for client {}:\n  open: {}\n  hosting: {}\n  host: {}\n  socket: {}\n  peers: {:?}", net.id, net.socket.is_some(), !net.host_id.is_shared(), net.host_id, net.socket.as_ref().map(|s| format!("{:?}", s)).or(Some("".to_string())).unwrap(), net.peers);
-                },
-                _ => ()
+                        net.open().expect("failed to start network client");
+                        match net.connect(("apollo.undertheprinter.com", 0).to_socket_addrs().unwrap().next().unwrap()) {
+                            Ok(()) => (),
+                            Err(e) => {
+                                println!("could not connect to remote client: {}", e);
+                                net.close();
+                            }
+                        }
+                    },
+                    "net_host" => {
+                        net.close();
+                        for (entity, _, rb, col) in (&entities, &slave_transform_flags, &rigid_bodies, &colliders).join() {
+                            physics.bodies.remove(rb.0);
+                            physics.colliders.remove(col.0);
+                            updater.remove::<SpriteCom>(entity);
+                            updater.remove::<TransformCom>(entity);
+                            updater.remove::<NetSlaveTransformCom>(entity);
+                            updater.remove::<RigidBodyCom>(entity);
+                            updater.remove::<ColliderCom>(entity);
+                        }
+                        net.open().expect("failed to start network client");
+                    },
+                    "debug" => {
+                        println!("Data for client {}:\n  open: {}\n  hosting: {}\n  host: {}\n  socket: {}\n  peers: {:?}", net.id, net.socket.is_some(), !net.host_id.is_shared(), net.host_id, net.socket.as_ref().map(|s| format!("{:?}", s)).or(Some("".to_string())).unwrap(), net.peers);
+                    },
+                    _ => ()
+                }
             }
         }
 
         net.process(&mut net_events);
-        for event in &net_events.0 {
+        for event in net_events.iter() {
             match event {
                 NetworkEvent::PeerMoved(origin_id, t) => {
                     for (slave_transform, transform) in (&slave_transform_flags, &mut transforms).join() {

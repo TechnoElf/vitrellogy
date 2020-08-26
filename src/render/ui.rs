@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use nalgebra::Vector2;
 
 use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage, WriteExpect};
@@ -16,7 +14,7 @@ pub struct UISys;
 impl<'a> System<'a> for UISys {
     type SystemData = (Read<'a, CameraRes>,
         Read<'a, MouseRes>,
-        Write<'a, UIEventRes>,
+        Write<'a, UIEventQueue>,
         WriteExpect<'a, RenderRes>,
         ReadStorage<'a, TextUICom>,
         ReadStorage<'a, ButtonUICom>,
@@ -25,13 +23,13 @@ impl<'a> System<'a> for UISys {
     fn run(&mut self, data: Self::SystemData) {
         let (camera, mouse, mut events, mut renderer, text_labels, buttons, transforms) = data;
 
-        events.0.clear();
+        events.clear();
         for (button, transform) in (&buttons, &transforms).join() {
             let pos = transform.pos.convert();
             let dim = button.dim;
             renderer.render_ss(&button.sprite, pos, dim, camera.screen);
             match mouse.0 {
-                Some(m) if pos.x < m.x && m.x < pos.x + dim.x && pos.y < m.y && m.y < pos.y + dim.y => events.0.push_back(UIEvent::new(&button.element_name, 1)),
+                Some(m) if pos.x < m.x && m.x < pos.x + dim.x && pos.y < m.y && m.y < pos.y + dim.y => events.push(UIEvent::ButtonPressed { id: button.element_name.clone() }),
                 Some(_) | None => ()
             }
         }
@@ -44,23 +42,11 @@ impl<'a> System<'a> for UISys {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct UIEvent {
-    pub element_name: String,
-    pub value: u32
-}
-
-impl UIEvent {
-    pub fn new(element_name: &str, value: u32) -> Self {
-        Self {
-            element_name: element_name.to_string(),
-            value: value
-        }
+event_queue! {
+    UIEventQueue: pub enum UIEvent {
+        ButtonPressed { id: String }
     }
 }
-
-#[derive(Default, Debug)]
-pub struct UIEventRes (pub VecDeque<UIEvent>);
 
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]

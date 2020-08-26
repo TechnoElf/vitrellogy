@@ -67,3 +67,41 @@ impl<T: NumCast + Debug + Copy + PartialEq + 'static, U: NumCast + Debug + Copy 
         Vector2::new(cast(self.x).unwrap(), cast(self.y).unwrap())
     }
 }
+
+#[macro_export]
+macro_rules! event_queue {
+    ($queue_name:ident : pub $type:tt $name:ident {$($element:tt)*}) => {
+        #[allow(dead_code)]
+        #[derive(Clone, Debug)]
+        pub $type $name {
+            $($element)+
+        }
+
+        #[allow(dead_code)]
+        #[derive(Default, Clone, Debug)]
+        pub struct $queue_name {
+            q: std::vec::Vec<$name>,
+        }
+
+        #[allow(dead_code)]
+        impl $queue_name {
+            pub fn new() -> Self {
+                Self {
+                    q: std::vec::Vec::new()
+                }
+            }
+
+            pub fn push(&mut self, item: $name) {
+                self.q.push(item);
+            }
+
+            pub fn iter(&self) -> std::slice::Iter<$name> {
+                self.q.iter()
+            }
+
+            fn clear(&mut self) {
+                self.q.clear();
+            }
+        }
+    };
+}

@@ -7,6 +7,7 @@ use nphysics2d::force_generator::DefaultForceGeneratorSet;
 use nphysics2d::joint::DefaultJointConstraintSet;
 use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
 
+#[macro_use]
 mod misc;
 use misc::{AppState, TransformCom, StateRes};
 

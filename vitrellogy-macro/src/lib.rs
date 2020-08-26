@@ -3,22 +3,22 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, DataStruct, FieldsNamed, FieldsUnnamed, Ident};
-use syn::Data::Struct;
-use syn::Fields::{Named, Unnamed, Unit};
+use syn::*;
+use syn::Data::*;
+use syn::Fields::*;
 
 const NAMES: [&str; 10] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"];
 
 #[proc_macro_derive(DefaultConstructor)]
-pub fn derive_default_constructor(input: TokenStream) -> TokenStream {
+pub fn default_constructor(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let ident = &input.ident;
 
     let constructor_impl = match &input.data {
-        Struct(DataStruct{fields: content, ..}) => {
+        Struct(DataStruct { fields: content, .. }) => {
             match content {
-                Named(FieldsNamed{named, ..}) => {
+                Named(FieldsNamed { named, .. }) => {
                     let parameters = named.iter().map(|field| {
                         let field_ident = &field.ident;
                         let field_type = &field.ty;
@@ -40,7 +40,7 @@ pub fn derive_default_constructor(input: TokenStream) -> TokenStream {
                         }
                     }
                 },
-                Unnamed(FieldsUnnamed{unnamed, ..}) => {
+                Unnamed(FieldsUnnamed { unnamed, .. }) => {
                     let parameters = unnamed.iter().enumerate().map(|(i, field)| {
                         let field_ident = Ident::new(NAMES[i], Span::call_site());
                         let field_type = &field.ty;

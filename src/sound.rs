@@ -5,7 +5,7 @@ use sdl2::mixer::*;
 use specs::*;
 
 use vitrellogy_macro::DefaultConstructor;
-use crate::render::ui::UIEventRes;
+use crate::render::ui::{UIEvent, UIEventQueue};
 
 pub struct SoundRes<'a> {
     _mixer: Sdl2MixerContext,
@@ -93,21 +93,23 @@ pub struct SoundSys(u8, MusicID);
 
 impl<'a> System<'a> for SoundSys {
     type SystemData = (WriteExpect<'a, SoundRes<'static>>,
-        Read<'a, UIEventRes>);
+        Read<'a, UIEventQueue>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (mut sound, ui_events) = data;
 
-        for event in &ui_events.0 {
-            match event.element_name.as_ref() {
-                "sound" => {
-                    sound.play_music(self.1, self.0 as usize);
-                    self.0 += 1;
-                    if self.0 > 3 {
-                        self.0 = 0;
-                    }
-                },
-                _ => ()
+        for event in ui_events.iter() {
+            match event {
+                UIEvent::ButtonPressed { id } => match id.as_ref() {
+                    "sound" => {
+                        sound.play_music(self.1, self.0 as usize);
+                        self.0 += 1;
+                        if self.0 > 3 {
+                            self.0 = 0;
+                        }
+                    },
+                    _ => ()
+                }
             }
         }
     }
