@@ -10,11 +10,10 @@ use nalgebra::Vector2;
 use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Write, Entities, WriteExpect, LazyUpdate, Read, DenseVecStorage};
 use specs::world::Builder;
 
-use crate::misc::TransformCom;
 use crate::render::ui::{UIEvent, UIEventQueue};
 use crate::render::SpriteCom;
 use crate::net::packet::*;
-use crate::physics::{PhysicsRes, ColliderCom, RigidBodyCom};
+use crate::physics::{PhysicsRes, ColliderCom, RigidBodyCom, TransformCom};
 
 const PORT_PREFIX: u16 = 20200;
 const PACKET_LENGTH: usize = 32;

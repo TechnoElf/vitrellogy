@@ -7,7 +7,7 @@ use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 use nalgebra::Vector2;
 
 use vitrellogy_macro::DefaultConstructor;
-use crate::misc::TransformCom;
+use crate::physics::TransformCom;
 
 #[derive(Debug, Clone)]
 #[repr(u8)]

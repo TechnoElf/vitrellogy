@@ -4,7 +4,7 @@ use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage, 
 
 use vitrellogy_macro::DefaultConstructor;
 use crate::render::{RenderRes, CameraRes};
-use crate::misc::TransformCom;
+use crate::physics::TransformCom;
 use crate::input::MouseRes;
 use crate::misc::Convertable;
 

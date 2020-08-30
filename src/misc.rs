@@ -6,10 +6,6 @@ use num_traits::cast::{NumCast, cast};
 
 use nalgebra::Vector2;
 
-use specs::{FlaggedStorage, VecStorage, Component};
-
-use vitrellogy_macro::DefaultConstructor;
-
 pub struct StateRes(HashMap<String, Box<dyn State>>);
 
 pub trait State: Any + Send + Sync + 'static {
@@ -47,15 +43,6 @@ impl StateRes {
 pub enum AppState {
     Running,
     Stopping
-}
-
-#[derive(Debug, Clone, DefaultConstructor)]
-pub struct TransformCom {
-    pub pos: Vector2<f32>,
-}
-
-impl Component for TransformCom {
-    type Storage = FlaggedStorage<Self, VecStorage<Self>>;
 }
 
 pub trait Convertable<U: NumCast + Debug + Copy + PartialEq + 'static> {

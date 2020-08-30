@@ -1,5 +1,4 @@
 pub mod ui;
-
 pub mod sdl;
 
 use nalgebra::Vector2;
@@ -7,7 +6,7 @@ use nalgebra::Vector2;
 use specs::{prelude::*, Component};
 
 use vitrellogy_macro::DefaultConstructor;
-use crate::misc::TransformCom;
+use crate::physics::TransformCom;
 use crate::render::sdl::SDLRenderImpl;
 
 #[derive(Component, Debug)]
@@ -44,12 +43,6 @@ impl TextCom {
     }
 }
 
-#[derive(Component, Debug, DefaultConstructor)]
-#[storage(HashMapStorage)]
-pub struct CameraCom {
-    pub offset: Vector2<f32>
-}
-
 #[derive(DefaultConstructor)]
 pub struct SpriteRenderSys;
 
@@ -84,23 +77,6 @@ impl<'a> System<'a> for TextRenderSys {
 
         for (text_field, transform) in (&text_fields, &transforms).join() {
             renderer.write(&text_field.text, &text_field.font, transform.pos, text_field.dim, camera.pos, camera.zoom, camera.screen);
-        }
-    }
-}
-
-#[derive(DefaultConstructor)]
-pub struct CameraSys;
-
-impl<'a> System<'a> for CameraSys {
-    type SystemData = (Write<'a, CameraRes>,
-        ReadStorage<'a, CameraCom>,
-        ReadStorage<'a, TransformCom>);
-
-    fn run(&mut self, data: Self::SystemData) {
-        let (mut camera, coms, transforms) = data;
-
-        for (com, transform) in (&coms, &transforms).join() {
-            camera.pos = transform.pos + com.offset;
         }
     }
 }

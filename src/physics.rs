@@ -1,5 +1,3 @@
-pub mod controller;
-
 use specs::*;
 use specs::storage::ComponentEvent;
 
@@ -10,7 +8,7 @@ use nphysics2d::joint::DefaultJointConstraintSet;
 use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
 use ncollide2d::shape::{ShapeHandle, Shape, Cuboid};
 
-use crate::misc::TransformCom;
+use vitrellogy_macro::DefaultConstructor;
 
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
@@ -20,6 +18,14 @@ pub struct RigidBodyCom(pub DefaultBodyHandle);
 #[storage(VecStorage)]
 pub struct ColliderCom(pub DefaultColliderHandle);
 
+#[derive(Debug, Clone, DefaultConstructor)]
+pub struct TransformCom {
+    pub pos: Vector2<f32>,
+}
+
+impl Component for TransformCom {
+    type Storage = FlaggedStorage<Self, VecStorage<Self>>;
+}
 
 impl Default for RigidBodyCom {
     fn default() -> Self {

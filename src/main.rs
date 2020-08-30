@@ -9,10 +9,10 @@ use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
 
 #[macro_use]
 mod misc;
-use misc::{AppState, TransformCom, StateRes};
+use misc::{AppState, StateRes};
 
 mod render;
-use render::{RenderRes, SpriteCom, SpriteRenderSys, CameraRes, CameraCom, CameraSys, TextRenderSys, TextCom};
+use render::{RenderRes, SpriteCom, SpriteRenderSys, CameraRes, TextRenderSys, TextCom};
 use render::sdl::SDLRenderImpl;
 use render::ui::{UISys, TextUICom, ButtonUICom};
 
@@ -21,14 +21,16 @@ use input::{InputSys, InputRes};
 use input::sdl::SDLInputImpl;
 
 mod physics;
-use physics::{PhysicsSys, PhysicsRes};
-use physics::controller::{ControllerCom, ControllerSys};
+use physics::{PhysicsSys, PhysicsRes, TransformCom};
 
 mod net;
 use net::{NetMasterTransformCom, NetworkSyncSys, NetworkRes};
 
 mod sound;
 use sound::{SoundRes, SoundSys};
+
+mod game;
+use game::controller::{ControllerCom, ControllerSys};
 
 fn main() {
     // Initialise resources
@@ -72,7 +74,6 @@ fn main() {
     let input_sys = InputSys::new();
     let network_sync = NetworkSyncSys::new();
     let controller_sys = ControllerSys::new();
-    let camera_sys = CameraSys::new();
     let physics_sys = PhysicsSys::new();
     let sound_sys = SoundSys::new(0, bg_music);
     
@@ -81,7 +82,6 @@ fn main() {
         .with(network_sync, "network_sync", &[])
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
-        .with(camera_sys, "camera", &["physics"])
         .with_thread_local(sound_sys)
         .with_thread_local(sprite_renderer)
         .with_thread_local(text_renderer)
@@ -177,7 +177,6 @@ fn main() {
     world.create_entity().with(SpriteCom::new("wizard", Vector2::new(2.0, 2.0)))
         .with(TransformCom::new(Vector2::new(0.0, 1.0)))
         .with(ControllerCom::new())
-        .with(CameraCom::new(Vector2::new(1.0, 1.0)))
 	    .with(NetMasterTransformCom::new())
         .with(rb)
         .with(col).build();
