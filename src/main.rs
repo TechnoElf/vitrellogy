@@ -12,7 +12,7 @@ mod misc;
 use misc::{AppState, StateRes};
 
 mod render;
-use render::{RenderRes, SpriteCom, SpriteRenderSys, CameraRes, TextRenderSys, TextCom};
+use render::{SpriteCom, RenderSys, CameraRes, TextCom};
 use render::sdl::SDLRenderImpl;
 use render::ui::{UISys, TextUICom, ButtonUICom};
 
@@ -35,9 +35,7 @@ use game::controller::{ControllerCom, ControllerSys};
 fn main() {
     // Initialise resources
     let sdl_context = sdl2::init().unwrap();
-    let mut render = RenderRes {
-        renderer: SDLRenderImpl::init(&sdl_context, Vector2::new(800, 600))
-    };
+    let mut render = SDLRenderImpl::init(&sdl_context, Vector2::new(800, 600));
     let input = InputRes {
         input: SDLInputImpl::init(&sdl_context)
     };
@@ -68,24 +66,22 @@ fn main() {
     let bg_music = sound.load_music(&["assets/placeholder/music/you-are-my-hope.ogg", "assets/placeholder/music/windward.ogg", "assets/placeholder/music/baby-bird.ogg", "assets/placeholder/music/loves-vagrant.ogg"]);
 
     // Initialise systems and set up the game world
-    let sprite_renderer = SpriteRenderSys::new();
-    let text_renderer = TextRenderSys::new();
-    let ui_renderer = UISys::new();
+    let render_sys = RenderSys::new(render);
+    let ui_sys = UISys::new();
     let input_sys = InputSys::new();
-    let network_sync = NetworkSyncSys::new();
+    let network_sys = NetworkSyncSys::new();
     let controller_sys = ControllerSys::new();
     let physics_sys = PhysicsSys::new();
     let sound_sys = SoundSys::new(0, bg_music);
     
     let mut dispatcher = DispatcherBuilder::new()
-        .with_thread_local(input_sys)
-        .with(network_sync, "network_sync", &[])
+        .with(network_sys, "network_sync", &[])
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
+        .with(ui_sys, "ui", &[])
+        .with_thread_local(input_sys)
         .with_thread_local(sound_sys)
-        .with_thread_local(sprite_renderer)
-        .with_thread_local(text_renderer)
-        .with_thread_local(ui_renderer).build();
+        .with_thread_local(render_sys).build();
 
     let mut world = World::new();
     dispatcher.setup(&mut world);
@@ -184,7 +180,6 @@ fn main() {
     // Add resources
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));
     world.insert(net);
-    world.insert(render);
     world.insert(input);
     world.insert(physics);
     world.insert(sound);

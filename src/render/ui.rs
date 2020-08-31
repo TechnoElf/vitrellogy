@@ -1,9 +1,8 @@
 use nalgebra::Vector2;
 
-use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage, WriteExpect};
+use specs::{System, Read, Write, ReadStorage, Join, Component, DenseVecStorage};
 
 use vitrellogy_macro::DefaultConstructor;
-use crate::render::{RenderRes, CameraRes};
 use crate::physics::TransformCom;
 use crate::input::MouseRes;
 use crate::misc::Convertable;
@@ -12,33 +11,23 @@ use crate::misc::Convertable;
 pub struct UISys;
 
 impl<'a> System<'a> for UISys {
-    type SystemData = (Read<'a, CameraRes>,
+    type SystemData = (Write<'a, UIEventQueue>,
         Read<'a, MouseRes>,
-        Write<'a, UIEventQueue>,
-        WriteExpect<'a, RenderRes>,
-        ReadStorage<'a, TextUICom>,
         ReadStorage<'a, ButtonUICom>,
         ReadStorage<'a, TransformCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (camera, mouse, mut events, mut renderer, text_labels, buttons, transforms) = data;
+        let (mut events, mouse, buttons, transforms) = data;
 
         events.clear();
         for (button, transform) in (&buttons, &transforms).join() {
-            let pos = transform.pos.convert();
+            let pos: Vector2<u32> = transform.pos.convert();
             let dim = button.dim;
-            renderer.render_ss(&button.sprite, pos, dim, camera.screen);
             match mouse.0 {
                 Some(m) if pos.x < m.x && m.x < pos.x + dim.x && pos.y < m.y && m.y < pos.y + dim.y => events.push(UIEvent::ButtonPressed { id: button.element_name.clone() }),
                 Some(_) | None => ()
             }
         }
-
-        for (text_label, transform) in (&text_labels, &transforms).join() {
-            renderer.write_ss(&text_label.text, &text_label.font, transform.pos.convert(), text_label.dim, camera.screen);
-        }
-
-        renderer.post();
     }
 }
 
