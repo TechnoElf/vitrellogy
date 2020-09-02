@@ -5,7 +5,7 @@ use sdl2::mixer::*;
 use specs::*;
 
 use vitrellogy_macro::DefaultConstructor;
-use crate::render::ui::{UIEvent, UIEventQueue};
+use crate::render::{UIEvent, UIEventQueue};
 
 pub struct SoundRes<'a> {
     _mixer: Sdl2MixerContext,

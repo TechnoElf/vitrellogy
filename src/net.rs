@@ -10,8 +10,7 @@ use nalgebra::Vector2;
 use specs::{Component, NullStorage, System, ReadStorage, WriteStorage, Join, Write, Entities, WriteExpect, LazyUpdate, Read, DenseVecStorage};
 use specs::world::Builder;
 
-use crate::render::ui::{UIEvent, UIEventQueue};
-use crate::render::SpriteCom;
+use crate::render::{UIEvent, UIEventQueue, SpriteCom};
 use crate::net::packet::*;
 use crate::physics::{PhysicsRes, ColliderCom, RigidBodyCom, TransformCom};
 

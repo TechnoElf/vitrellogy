@@ -12,9 +12,8 @@ mod misc;
 use misc::{AppState, StateRes};
 
 mod render;
-use render::{SpriteCom, RenderSys, CameraRes, TextCom};
+use render::{SpriteCom, RenderSys, CameraRes, TextCom, UISys, TextUICom, ButtonUICom, Constraints, PositionConstraint, SizeConstraint};
 use render::sdl::SDLRenderImpl;
-use render::ui::{UISys, TextUICom, ButtonUICom};
 
 mod input;
 use input::{InputSys, InputRes};
@@ -148,23 +147,19 @@ fn main() {
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vector2::new(1.0, 1.0)))
         .with(TransformCom::new(Vector2::new(7.0, 5.0))).build();
 
-    world.create_entity().with(ButtonUICom::new("r", "g", Vector2::new(120, 50), "net_connect"))
-        .with(TransformCom::new(Vector2::new(10.0, 10.0))).build();
+    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "r", "g", "net_connect")).build();
     world.create_entity().with(TextUICom::new("Connect", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 10.0))).build();
 
-    world.create_entity().with(ButtonUICom::new("g", "b", Vector2::new(120, 50), "net_host"))
-        .with(TransformCom::new(Vector2::new(10.0, 70.0))).build();
+    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(70), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "g", "b", "net_host")).build();
     world.create_entity().with(TextUICom::new("Host", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 70.0))).build();
 
-    world.create_entity().with(ButtonUICom::new("b", "r", Vector2::new(120, 50), "debug"))
-        .with(TransformCom::new(Vector2::new(10.0, 130.0))).build();
+    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(130), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "b", "r", "debug")).build();
     world.create_entity().with(TextUICom::new("Debug", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 130.0))).build();
 
-    world.create_entity().with(ButtonUICom::new("r", "g", Vector2::new(120, 50), "sound"))
-        .with(TransformCom::new(Vector2::new(10.0, 190.0))).build();
+    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(190), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "r", "g", "sound")).build();
     world.create_entity().with(TextUICom::new("Sound", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 190.0))).build();
 
