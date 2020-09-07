@@ -26,9 +26,11 @@ mod net;
 use net::{NetMasterTransformCom, NetworkSyncSys, NetworkRes};
 
 mod sound;
-use sound::{SoundRes, SoundSys};
+use sound::SoundSys;
+use sound::imp::SoundImp;
 
 mod game;
+use game::DebugUISys;
 use game::controller::{ControllerCom, ControllerSys};
 
 fn main() {
@@ -48,7 +50,7 @@ fn main() {
         forces: DefaultForceGeneratorSet::new()
     };
     let net = NetworkRes::new();
-    let mut sound = SoundRes::new();
+    let mut sound = SoundImp::new();
     let mut state = StateRes::new();
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
@@ -75,13 +77,15 @@ fn main() {
     let network_sys = NetworkSyncSys::new();
     let controller_sys = ControllerSys::new();
     let physics_sys = PhysicsSys::new();
-    let sound_sys = SoundSys::new(0, bg_music);
+    let sound_sys = SoundSys::new(sound);
+    let debug_ui_sys = DebugUISys::new(0, bg_music);
     
     let mut dispatcher = DispatcherBuilder::new()
         .with(network_sys, "network_sync", &[])
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
         .with(ui_sys, "ui", &[])
+        .with(debug_ui_sys, "debug_ui", &[])
         .with_thread_local(input_sys)
         .with_thread_local(sound_sys)
         .with_thread_local(render_sys).build();
@@ -190,7 +194,6 @@ fn main() {
     world.insert(net);
     world.insert(input);
     world.insert(physics);
-    world.insert(sound);
     world.insert(state);
 
     let target_frame_rate = 60.0;
