@@ -53,6 +53,10 @@ fn main() {
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
     render.add_sprite("tree", "assets/placeholder/sprites/tree.png");
+    render.add_sprite("bolt0", "assets/placeholder/sprites/bolt0.png");
+    render.add_sprite("bolt1", "assets/placeholder/sprites/bolt1.png");
+    render.add_sprite("bolt2", "assets/placeholder/sprites/bolt2.png");
+    render.add_sprite("bolt3", "assets/placeholder/sprites/bolt3.png");
     render.add_sprite("r", "assets/placeholder/sprites/32x32-w-r.png");
     render.add_sprite("g", "assets/placeholder/sprites/32x32-w-g.png");
     render.add_sprite("b", "assets/placeholder/sprites/32x32-w-b.png");
@@ -171,6 +175,15 @@ fn main() {
 	    .with(NetMasterTransformCom::new())
         .with(rb)
         .with(col).build();
+
+    world.create_entity().with(SpriteCom::new("bolt0", Vector2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vector2::new(2.0, 3.0))).build();
+    world.create_entity().with(SpriteCom::new("bolt1", Vector2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vector2::new(3.0, 3.0))).build();
+    world.create_entity().with(SpriteCom::new("bolt2", Vector2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vector2::new(3.0, 4.0))).build();
+    world.create_entity().with(SpriteCom::new("bolt3", Vector2::new(1.0, 1.0)))
+        .with(TransformCom::new(Vector2::new(2.0, 4.0))).build();
 
     // Add resources
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));

@@ -60,18 +60,26 @@ impl<'a> SoundRes<'a> {
     }
 
     pub fn play_music(&mut self, id: MusicID, layer: usize) {
-        if !(self.current_music.is_some() && id == self.current_music.as_ref().unwrap().0 && layer == self.current_music.as_ref().unwrap().1) {
-            if self.current_music.is_some() {
+        if self.current_music.is_some() {
+            if id != self.current_music.as_ref().unwrap().0 {
                 Music::fade_out(0).unwrap();
+
+                self.music_cache[id.0][layer].0.fade_in_from_pos(-1, 0, 0.0).unwrap();
+                self.current_music = Some((id, layer, Instant::now()));
+            } else if layer != self.current_music.as_ref().unwrap().1 {
+                Music::fade_out(0).unwrap();
+
                 let mut time = self.current_music.as_ref().unwrap().2.elapsed().as_secs_f64() % self.music_cache[(self.current_music.as_ref().unwrap().0).0][self.current_music.as_ref().unwrap().1].1;
                 if time >= self.music_cache[id.0][layer].1 {
                     time = 0.0;
                 }
+
                 self.music_cache[id.0][layer].0.fade_in_from_pos(-1, 0, time).unwrap();
-            } else {
-                self.music_cache[id.0][layer].0.play(-1).unwrap();
-                self.current_music = Some((id, layer, Instant::now()));
+                self.current_music.as_mut().unwrap().1 = layer;
             }
+        } else {
+            self.music_cache[id.0][layer].0.play(-1).unwrap();
+            self.current_music = Some((id, layer, Instant::now()));
         }
     }
 
@@ -119,6 +127,3 @@ impl<'a> System<'a> for SoundSys {
 pub struct SoundID(usize);
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct MusicID(pub usize);
-
-#[allow(dead_code)]
-pub struct SoundGroup(Vec<SoundID>);
