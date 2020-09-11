@@ -23,7 +23,8 @@ mod physics;
 use physics::{PhysicsSys, PhysicsRes, TransformCom};
 
 mod net;
-use net::{NetMasterTransformCom, NetworkSyncSys, NetworkRes};
+use net::{NetMasterTransformCom, NetworkSyncSys};
+use net::imp::NetworkImp;
 
 mod sound;
 use sound::SoundSys;
@@ -49,7 +50,7 @@ fn main() {
         constraints: DefaultJointConstraintSet::new(),
         forces: DefaultForceGeneratorSet::new()
     };
-    let net = NetworkRes::new();
+    let net = NetworkImp::new();
     let mut sound = SoundImp::new();
     let mut state = StateRes::new();
 
@@ -74,7 +75,7 @@ fn main() {
     let render_sys = RenderSys::new(render);
     let ui_sys = UISys::new();
     let input_sys = InputSys::new();
-    let network_sys = NetworkSyncSys::new();
+    let network_sys = NetworkSyncSys::new(net);
     let controller_sys = ControllerSys::new();
     let physics_sys = PhysicsSys::new();
     let sound_sys = SoundSys::new(sound);
@@ -155,11 +156,11 @@ fn main() {
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vector2::new(1.0, 1.0)))
         .with(TransformCom::new(Vector2::new(7.0, 5.0))).build();
 
-    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "r", "g", "net_connect")).build();
+    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "r", "g", "connect")).build();
     world.create_entity().with(TextUICom::new("Connect", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 10.0))).build();
 
-    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(70), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "g", "b", "net_host")).build();
+    world.create_entity().with(ButtonUICom::new(Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(70), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)), "g", "b", "host")).build();
     world.create_entity().with(TextUICom::new("Host", "caveat", Vector2::new(120, 50)))
         .with(TransformCom::new(Vector2::new(10.0, 70.0))).build();
 
@@ -191,7 +192,6 @@ fn main() {
 
     // Add resources
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));
-    world.insert(net);
     world.insert(input);
     world.insert(physics);
     world.insert(state);
