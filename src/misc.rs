@@ -6,6 +6,7 @@ use num_traits::cast::{NumCast, cast};
 
 use nalgebra::Vector2;
 
+#[derive(Default)]
 pub struct StateRes(HashMap<String, Box<dyn State>>);
 
 pub trait State: Any + Send + Sync + 'static {
@@ -39,7 +40,7 @@ impl StateRes {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AppState {
     Running,
     Stopping

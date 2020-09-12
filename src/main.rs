@@ -52,7 +52,6 @@ fn main() {
     };
     let net = NetworkImp::new();
     let mut sound = SoundImp::new();
-    let mut state = StateRes::new();
 
     render.add_sprite("wizard", "assets/placeholder/sprites/wizard.png");
     render.add_sprite("tree", "assets/placeholder/sprites/tree.png");
@@ -66,8 +65,6 @@ fn main() {
     render.add_font("caveat", "assets/placeholder/fonts/caveat.ttf", 64, 10, 10, 10);
     render.add_font("nemoy", "assets/placeholder/fonts/nemoy.otf", 64, 200, 128, 255);
     render.add_font("patrickhand", "assets/placeholder/fonts/patrickhand.ttf", 64, 255, 255, 255);
-
-    state.insert("app", AppState::Running);
 
     let bg_music = sound.load_music(&["assets/placeholder/music/you-are-my-hope.ogg", "assets/placeholder/music/windward.ogg", "assets/placeholder/music/baby-bird.ogg", "assets/placeholder/music/loves-vagrant.ogg"]);
 
@@ -194,7 +191,7 @@ fn main() {
     world.insert(CameraRes::new(Vector2::new(0.0, 0.0), 1.0, Vector2::new(800, 600)));
     world.insert(input);
     world.insert(physics);
-    world.insert(state);
+    world.insert(StateRes::default());
 
     let target_frame_rate = 60.0;
     let target_frame_time = 1.0 / target_frame_rate;
@@ -202,7 +199,9 @@ fn main() {
     let mut time = Instant::now();
     let mut delta_time;
 
-    loop {
+    world.write_resource::<StateRes>().insert("app", AppState::Running);
+
+    while world.read_resource::<StateRes>().get::<AppState>("app").unwrap() == &AppState::Running {
         // Calculate the time since the last frame and wait to lock to 60fps, if necessary
         delta_time = (time.elapsed().as_micros() as f64 / 1000000.0) as f32;
         while delta_time < target_frame_time {
@@ -215,17 +214,7 @@ fn main() {
             delta_time = 0.0;
         }
 
-        // Update the delta time resource in a block so rust doesn't complain about multiple borrows
-        {
-            let mut physics = world.write_resource::<PhysicsRes>();
-            physics.delta_time = delta_time;
-        }
-
-        // Check if the game has been quit
-        match world.read_resource::<StateRes>().get("app").unwrap() {
-            AppState::Stopping => break,
-            _ => {}
-        }
+        world.write_resource::<PhysicsRes>().delta_time = delta_time;
 
         // Run the game
         dispatcher.dispatch(&mut world);
