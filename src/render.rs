@@ -212,3 +212,11 @@ impl SizeConstraint {
         }
     }
 }
+
+pub fn register(world: &mut World) {
+    world.insert(CameraRes::default());
+    world.register::<SpriteCom>();
+    world.register::<TextCom>();
+    world.register::<TextUICom>();
+    world.register::<ButtonUICom>();
+}
