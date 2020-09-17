@@ -7,8 +7,8 @@ use specs::{prelude::*, Component, DenseVecStorage};
 use vitrellogy_macro::DefaultConstructor;
 use crate::physics::TransformCom;
 use crate::render::sdl::SDLRenderImpl;
-use crate::misc::Convertable;
 use crate::input::MouseRes;
+use crate::misc::Convertable;
 
 #[derive(Debug, DefaultConstructor)]
 pub struct CameraRes {
@@ -33,15 +33,21 @@ pub struct RenderSys {
 }
 
 impl<'a> System<'a> for RenderSys {
-    type SystemData = (Read<'a, CameraRes>,
+    type SystemData = (Write<'a, UIEventQueue>,
+        Read<'a, CameraRes>,
+        Read<'a, MouseRes>,
         ReadStorage<'a, TransformCom>,
         ReadStorage<'a, SpriteCom>,
         ReadStorage<'a, TextCom>,
         ReadStorage<'a, ButtonUICom>,
-        ReadStorage<'a, TextUICom>);
+        ReadStorage<'a, TextUICom>,
+        ReadStorage<'a, StartVerticalGroupCom>,
+        ReadStorage<'a, StartHorizontalGroupCom>,
+        ReadStorage<'a, EndGroupCom>,
+        ReadStorage<'a, ConstraintCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (camera, transforms, sprites, texts, buttons, text_labels) = data;
+        let (mut events, camera, mouse, transforms, sprites, texts, buttons, text_labels, v_group_start, h_group_start, group_end, constraints) = data;
 
         self.renderer.pre();
 
@@ -53,14 +59,67 @@ impl<'a> System<'a> for RenderSys {
             self.renderer.write(&text.text, &text.font, transform.pos, text.dim, camera.pos, camera.zoom, camera.screen);
         }
 
-        for button in (&buttons).join() {
-            let size = Vector2::new(button.constraints.x_size.as_pixels(camera.screen.x), button.constraints.y_size.as_pixels(camera.screen.y));
-            let pos = Vector2::new(button.constraints.x_pos.as_pixels(size.x, camera.screen.x), button.constraints.y_pos.as_pixels(size.y, camera.screen.y));
-            self.renderer.render_ss(&button.sprite, pos, size, camera.screen);
-        }
+        events.clear();
+        let mut container: Vec<(Vector2<u32>, Vector2<u32>, Vector2<u32>, bool)> = Vec::new();
+        container.push((Vector2::new(0, 0), camera.screen, Vector2::new(0, 0), true));
+        for (constraint, button, text_label, vgs, hgs, ge) in (&constraints, (&buttons).maybe(), (&text_labels).maybe(), (&v_group_start).maybe(), (&h_group_start).maybe(), (&group_end).maybe()).join() {
+            let size = Vector2::new(constraint.x_size.as_pixels(container.last().unwrap().1.x), constraint.y_size.as_pixels(container.last().unwrap().1.y));
+            let pos = Vector2::new(constraint.x_pos.as_pixels(size.x, container.last().unwrap().1.x) + container.last().unwrap().0.x, constraint.y_pos.as_pixels(size.y, container.last().unwrap().1.y) + container.last().unwrap().0.y);
 
-        for (text_label, transform) in (&text_labels, &transforms).join() {
-            self.renderer.write_ss(&text_label.text, &text_label.font, transform.pos.convert(), text_label.dim, camera.screen);
+            match vgs {
+                Some(_) => {
+                    container.push((pos, size, Vector2::new(0, 0), true));
+                    continue;
+                },
+                None => ()
+            }
+
+            match hgs {
+                Some(_) => {
+                    container.push((pos, size, Vector2::new(0, 0), false));
+                    continue;
+                },
+                None => ()
+            }
+
+            match ge {
+                Some(_) => {
+                    container.pop();
+                    continue;
+                },
+                None => ()
+            }
+            
+            container.last_mut().unwrap().2 += pos;
+
+            match button {
+                Some(button) => {
+                    match mouse.0 {
+                        Some(m) if container.last_mut().unwrap().2.x < m.x && m.x < container.last_mut().unwrap().2.x + size.x && container.last_mut().unwrap().2.y < m.y && m.y < container.last_mut().unwrap().2.y + size.y => {
+                            events.push(UIEvent::ButtonPressed { id: button.element_name.clone() });
+                            self.renderer.render_ss(&button.sprite_pressed, container.last_mut().unwrap().2.convert(), size, camera.screen);
+                        },
+                        Some(_) | None => self.renderer.render_ss(&button.sprite, container.last_mut().unwrap().2.convert(), size, camera.screen)
+
+                    }
+                },
+                None => ()
+            }
+
+            match text_label {
+                Some(text_label) => {
+                    self.renderer.write_ss(&text_label.text, &text_label.font, container.last_mut().unwrap().2.convert(), size, camera.screen);
+                },
+                None => ()
+            }
+
+            if container.last_mut().unwrap().3 {
+                container.last_mut().unwrap().2.y += size.y;
+                container.last_mut().unwrap().2.x -= pos.x;
+            } else {
+                container.last_mut().unwrap().2.x += size.x;
+                container.last_mut().unwrap().2.y -= pos.y;
+            }
         }
 
         self.renderer.post();
@@ -107,44 +166,18 @@ event_queue! {
     }
 }
 
-#[derive(DefaultConstructor)]
-pub struct UISys;
-
-impl<'a> System<'a> for UISys {
-    type SystemData = (Write<'a, UIEventQueue>,
-        Read<'a, CameraRes>,
-        Read<'a, MouseRes>,
-        ReadStorage<'a, ButtonUICom>);
-
-    fn run(&mut self, data: Self::SystemData) {
-        let (mut events, camera, mouse, buttons) = data;
-
-        events.clear();
-        for button in (&buttons).join() {
-            let size = Vector2::new(button.constraints.x_size.as_pixels(camera.screen.x), button.constraints.y_size.as_pixels(camera.screen.y));
-            let pos = Vector2::new(button.constraints.x_pos.as_pixels(size.x, camera.screen.x), button.constraints.y_pos.as_pixels(size.y, camera.screen.y));
-            match mouse.0 {
-                Some(m) if pos.x < m.x && m.x < pos.x + size.x && pos.y < m.y && m.y < pos.y + size.y => events.push(UIEvent::ButtonPressed { id: button.element_name.clone() }),
-                Some(_) | None => ()
-            }
-        }
-    }
-}
-
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct TextUICom {
     pub text: String,
-    pub font: String,
-    pub dim: Vector2<u32>
+    pub font: String
 }
 
 impl TextUICom {
-    pub fn new(text: &str, font: &str, dim: Vector2<u32>) -> Self {
+    pub fn new(text: &str, font: &str) -> Self {
         Self {
             text: text.to_string(),
-            font: font.to_string(),
-            dim: dim
+            font: font.to_string()
         }
     }
 }
@@ -152,16 +185,14 @@ impl TextUICom {
 #[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct ButtonUICom {
-    pub constraints: Constraints,
     pub sprite: String,
     pub sprite_pressed: String,
     pub element_name: String
 }
 
 impl ButtonUICom {
-    pub fn new(constraints: Constraints, sprite: &str, sprite_pressed: &str, element_name: &str) -> Self {
+    pub fn new(sprite: &str, sprite_pressed: &str, element_name: &str) -> Self {
         Self {
-            constraints: constraints,
             sprite: sprite.to_string(),
             sprite_pressed: sprite_pressed.to_string(),
             element_name: element_name.to_string()
@@ -169,13 +200,26 @@ impl ButtonUICom {
     }
 }
 
-#[derive(Debug, DefaultConstructor)]
-pub struct Constraints {
+#[derive(Component, Debug, DefaultConstructor)]
+#[storage(DenseVecStorage)]
+pub struct ConstraintCom {
     x_pos: PositionConstraint,
     y_pos: PositionConstraint,
     x_size: SizeConstraint,
     y_size: SizeConstraint
 }
+
+#[derive(Component, Debug, DefaultConstructor)]
+#[storage(DenseVecStorage)]
+pub struct StartVerticalGroupCom;
+
+#[derive(Component, Debug, DefaultConstructor)]
+#[storage(DenseVecStorage)]
+pub struct StartHorizontalGroupCom;
+
+#[derive(Component, Debug, DefaultConstructor)]
+#[storage(DenseVecStorage)]
+pub struct EndGroupCom;
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
@@ -201,14 +245,16 @@ impl PositionConstraint {
 #[derive(Debug, Copy, Clone)]
 pub enum SizeConstraint {
     Proportion(f32),
-    Pixels(u32)
+    Pixels(u32),
+    NegativePixels(u32)
 }
 
 impl SizeConstraint {
     fn as_pixels(&self, container_size: u32) -> u32 {
         match self {
             SizeConstraint::Proportion(proportion) => (proportion * container_size as f32).floor() as u32,
-            SizeConstraint::Pixels(pixels) => pixels.clone()
+            SizeConstraint::Pixels(pixels) => pixels.clone(),
+            SizeConstraint::NegativePixels(pixels) => container_size - pixels.clone()
         }
     }
 }
@@ -217,6 +263,10 @@ pub fn register(world: &mut World) {
     world.insert(CameraRes::default());
     world.register::<SpriteCom>();
     world.register::<TextCom>();
+    world.register::<ConstraintCom>();
     world.register::<TextUICom>();
     world.register::<ButtonUICom>();
+    world.register::<StartVerticalGroupCom>();
+    world.register::<StartHorizontalGroupCom>();
+    world.register::<EndGroupCom>();
 }

@@ -8,7 +8,7 @@ use specs::*;
 
 use crate::sound::{SoundRequestQueue, SoundRequest, MusicID, LayerID};
 use crate::sound::imp::SoundImp;
-use crate::render::{UIEventQueue, UIEvent, Constraints, PositionConstraint, SizeConstraint, ButtonUICom, TextUICom, SpriteCom, TextCom};
+use crate::render::{UIEventQueue, UIEvent, ConstraintCom, PositionConstraint, SizeConstraint, ButtonUICom, TextUICom, SpriteCom, TextCom, StartVerticalGroupCom, EndGroupCom};
 use crate::net::{NetworkRequestQueue, NetworkRequest, NetMasterTransformCom};
 use crate::physics::{TransformCom, PhysicsRes};
 use crate::misc::{StateRes, AppState};
@@ -54,35 +54,38 @@ impl<'a> System<'a> for DebugUISys {
     fn setup(&mut self, world: &mut World) {
         Self::SystemData::setup(world);
 
-        world.create_entity().with(ButtonUICom::new(
-            Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)),
-            "r", "g", "connect")).build();
-        world.create_entity().with(TextUICom::new("Connect", "caveat", Vector2::new(120, 50)))
-            .with(TransformCom::new(Vector2::new(10.0, 10.0))).build();
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::StartPixelOffset(0), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(140), SizeConstraint::Proportion(1.0)))
+            .with(StartVerticalGroupCom::new()).build();
 
-        world.create_entity().with(ButtonUICom::new(
-            Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(70), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)),
-            "g", "b", "host")).build();
-        world.create_entity().with(TextUICom::new("Host", "caveat", Vector2::new(120, 50)))
-            .with(TransformCom::new(Vector2::new(10.0, 70.0))).build();
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
+            .with(ButtonUICom::new("r", "g", "connect"))
+            .with(TextUICom::new("Connect", "caveat")).build();
 
-        world.create_entity().with(ButtonUICom::new(
-            Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(130), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)),
-            "b", "r", "debug")).build();
-        world.create_entity().with(TextUICom::new("Debug", "caveat", Vector2::new(120, 50)))
-            .with(TransformCom::new(Vector2::new(10.0, 130.0))).build();
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
+            .with(ButtonUICom::new("g", "b", "host"))
+            .with(TextUICom::new("Host", "caveat")).build();
 
-        world.create_entity().with(ButtonUICom::new(
-            Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(190), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)),
-            "r", "g", "sound")).build();
-        world.create_entity().with(TextUICom::new("Sound", "caveat", Vector2::new(120, 50)))
-            .with(TransformCom::new(Vector2::new(10.0, 190.0))).build();
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
+            .with(ButtonUICom::new("b", "r", "debug"))
+            .with(TextUICom::new("Debug", "caveat")).build();
 
-        world.create_entity().with(ButtonUICom::new(
-            Constraints::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(250), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50)),
-            "g", "b", "quit")).build();
-        world.create_entity().with(TextUICom::new("Quit", "caveat", Vector2::new(120, 50)))
-            .with(TransformCom::new(Vector2::new(10.0, 250.0))).build();
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
+            .with(ButtonUICom::new("r", "g", "sound"))
+            .with(TextUICom::new("Sound", "caveat")).build();
+
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
+            .with(ButtonUICom::new("g", "b", "quit"))
+            .with(TextUICom::new("Quit", "caveat")).build();
+
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::StartPixelOffset(0), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(0), SizeConstraint::Pixels(0)))
+            .with(EndGroupCom::new()).build();
     }
 }
 
@@ -156,13 +159,13 @@ pub fn build_world(world: &mut World, physics: &mut PhysicsRes) {
         .with(rb)
         .with(col).build();
 
-    for pos in 1..6 {
+    for pos in 3..8 {
         world.create_entity().with(SpriteCom::new("b", Vector2::new(1.0, 1.0)))
             .with(TransformCom::new(Vector2::new(pos as f32, 14.0))).build();
     }
     let rb = physics.create_rigid_body_static();
     let col = physics.create_collider_rectangle(Vector2::new(5.0, 1.0), &rb);
-    world.create_entity().with(TransformCom::new(Vector2::new(1.0, 14.0)))
+    world.create_entity().with(TransformCom::new(Vector2::new(3.0, 14.0)))
         .with(rb)
         .with(col).build();
 

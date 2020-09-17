@@ -12,7 +12,7 @@ mod misc;
 use misc::{AppState, StateRes};
 
 mod render;
-use render::{RenderSys, UISys};
+use render::RenderSys;
 use render::sdl::SDLRenderImpl;
 
 mod input;
@@ -72,7 +72,6 @@ fn main() {
     // Initialise systems and set up the game world
     let debug_ui_sys = DebugUISys::new(&mut sound);
     let render_sys = RenderSys::new(render);
-    let ui_sys = UISys::new();
     let input_sys = InputSys::new();
     let network_sys = NetworkSyncSys::new(net);
     let controller_sys = ControllerSys::new();
@@ -83,8 +82,7 @@ fn main() {
         .with(network_sys, "network_sync", &[])
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
-        .with(ui_sys, "ui", &[])
-        .with(debug_ui_sys, "debug_ui", &["ui"])
+        .with(debug_ui_sys, "debug_ui", &[])
         .with_thread_local(input_sys)
         .with_thread_local(sound_sys)
         .with_thread_local(render_sys).build();
