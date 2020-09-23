@@ -1,3 +1,5 @@
+use serde::{Serialize, Deserialize};
+
 use specs::*;
 use specs::storage::ComponentEvent;
 
@@ -10,6 +12,8 @@ use ncollide2d::shape::{ShapeHandle, Shape, Cuboid};
 
 use vitrellogy_macro::DefaultConstructor;
 
+use crate::misc::Vector;
+
 #[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct RigidBodyCom(pub DefaultBodyHandle);
@@ -18,9 +22,9 @@ pub struct RigidBodyCom(pub DefaultBodyHandle);
 #[storage(VecStorage)]
 pub struct ColliderCom(pub DefaultColliderHandle);
 
-#[derive(Debug, Clone, DefaultConstructor)]
+#[derive(Debug, Clone, DefaultConstructor, Serialize, Deserialize)]
 pub struct TransformCom {
-    pub pos: Vector2<f32>,
+    pub pos: Vector,
 }
 
 impl Component for TransformCom {
@@ -59,7 +63,7 @@ impl<'a> System<'a> for PhysicsSys {
         }
         for (transform, rigid_body, _) in (&transforms, &rigid_bodies, &self.external_transforms).join() {
             match physics.write_rigid_body(rigid_body) {
-                Some(rb) => rb.set_position(Isometry2::new(transform.pos, 0.0)),
+                Some(rb) => rb.set_position(Isometry2::new(*transform.pos, 0.0)),
                 None => ()
             }
         }
@@ -79,7 +83,7 @@ impl<'a> System<'a> for PhysicsSys {
 
         for (transform, rigid_body) in (&mut transforms, &rigid_bodies).join() {
             match physics.read_rigid_body(rigid_body) {
-                Some(rb) => transform.pos = rb.position().translation.vector,
+                Some(rb) => transform.pos = Vector(rb.position().translation.vector),
                 None => ()
             }
         }
@@ -126,6 +130,14 @@ impl Default for PhysicsRes {
 
 #[allow(dead_code)]
 impl PhysicsRes {
+    pub fn register_rigid_body(&mut self, rb: RigidBody<f32>) -> RigidBodyCom {
+        RigidBodyCom(self.bodies.insert(rb))
+    }
+
+    pub fn register_collider(&mut self, c: Collider<f32, DefaultBodyHandle>) -> ColliderCom {
+        ColliderCom(self.colliders.insert(c))
+    }
+
     pub fn create_rigid_body(&mut self) -> RigidBodyCom {
         RigidBodyCom(self.bodies.insert(RigidBodyDesc::new().mass(1.0).build()))
     }
@@ -148,5 +160,9 @@ impl PhysicsRes {
 
     pub fn read_rigid_body(&self, rb: &RigidBodyCom) -> Option<&RigidBody<f32>> {
         self.bodies.rigid_body(rb.0)
+    }
+
+    pub fn read_collider(&self, c: &ColliderCom) -> Option<&Collider<f32, DefaultBodyHandle>> {
+        self.colliders.get(c.0)
     }
 }

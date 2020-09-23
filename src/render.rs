@@ -1,5 +1,7 @@
 pub mod sdl;
 
+use serde::{Serialize, Deserialize};
+
 use nalgebra::Vector2;
 
 use specs::{prelude::*, Component, DenseVecStorage};
@@ -8,11 +10,11 @@ use vitrellogy_macro::DefaultConstructor;
 use crate::physics::TransformCom;
 use crate::render::sdl::SDLRenderImpl;
 use crate::input::MouseRes;
-use crate::misc::Convertable;
+use crate::misc::{Convertable, Vector};
 
 #[derive(Debug, DefaultConstructor)]
 pub struct CameraRes {
-    pub pos: Vector2<f32>,
+    pub pos: Vector,
     pub zoom: f32,
     pub screen: Vector2<u32>
 }
@@ -20,7 +22,7 @@ pub struct CameraRes {
 impl Default for CameraRes {
     fn default() -> Self {
         Self {
-            pos: Vector2::new(0.0, 0.0),
+            pos: Vector::new(0.0, 0.0),
             zoom: 1.0,
             screen: Vector2::new(800, 600)
         }
@@ -126,15 +128,15 @@ impl<'a> System<'a> for RenderSys {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
 #[storage(VecStorage)]
 pub struct SpriteCom {
     pub name: String,
-    pub dim: Vector2<f32>
+    pub dim: Vector
 }
 
 impl SpriteCom {
-    pub fn new(name: &str, dim: Vector2<f32>) -> Self {
+    pub fn new(name: &str, dim: Vector) -> Self {
         Self {
             name: name.to_string(),
             dim: dim
@@ -147,11 +149,11 @@ impl SpriteCom {
 pub struct TextCom {
     pub text: String,
     pub font: String,
-    pub dim: Vector2<f32>
+    pub dim: Vector
 }
 
 impl TextCom {
-    pub fn new(text: &str, font: &str, dim: Vector2<f32>) -> Self {
+    pub fn new(text: &str, font: &str, dim: Vector) -> Self {
         Self {
             text: text.to_string(),
             font: font.to_string(),

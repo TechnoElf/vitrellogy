@@ -45,7 +45,7 @@ impl<'a> System<'a> for ControllerSys {
         }
 
         for (_controller, transform) in (&controllers, &transforms).join() {
-            let centre = transform.pos + Vector2::new(1.0, 1.0);
+            let centre = *transform.pos + Vector2::new(1.0, 1.0);
             
             match (centre.x - camera.pos.x).partial_cmp(&0.0).unwrap() {
                 Ordering::Greater if centre.x - camera.pos.x > 1.0 => camera.pos.x += centre.x - camera.pos.x - 1.0,

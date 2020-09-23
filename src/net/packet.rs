@@ -4,10 +4,9 @@ use std::fmt::{Display, Debug, Formatter};
 use std::fmt;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
-use nalgebra::Vector2;
-
 use vitrellogy_macro::DefaultConstructor;
 use crate::physics::TransformCom;
+use crate::misc::Vector;
 
 #[derive(Debug, Clone)]
 #[repr(u8)]
@@ -99,7 +98,7 @@ impl Packet {
             7 => Packet::Transform(TransformPacket {
                 origin_id: NetID::from_bytes(&packet[1..=4]),
                 transform: TransformCom::new(
-                    Vector2::new(
+                    Vector::new(
                         f32::from_le_bytes(packet[5..=8].try_into().unwrap()),
                         f32::from_le_bytes(packet[9..=12].try_into().unwrap())
                     )

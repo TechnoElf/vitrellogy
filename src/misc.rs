@@ -1,10 +1,19 @@
-use std::fmt::Debug;
+pub mod persist;
+
+use std::fmt::{Debug, Formatter};
 use std::collections::HashMap;
 use std::any::{Any, TypeId};
+use std::ops::{Deref, DerefMut};
+
+use serde::{Serialize, Deserialize, Serializer, Deserializer, ser::SerializeTuple, de::Visitor, de::SeqAccess};
 
 use num_traits::cast::{NumCast, cast};
 
 use nalgebra::Vector2;
+
+use specs::*;
+
+use crate::misc::persist::{StageMarker, StageMarkerAllocator};
 
 #[derive(Default)]
 pub struct StateRes(HashMap<String, Box<dyn State>>);
@@ -92,4 +101,78 @@ macro_rules! event_queue {
             }
         }
     };
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Vector(pub Vector2<f32>);
+
+impl Vector {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self(Vector2::new(x, y))
+    }
+}
+
+impl Serialize for Vector {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error> 
+    where S: Serializer {
+        let mut tup = ser.serialize_tuple(2)?;
+        tup.serialize_element(&self.x)?;
+        tup.serialize_element(&self.y)?;
+        tup.end()
+    }
+}
+
+struct VectorVisitor;
+
+impl<'de> Visitor<'de> for VectorVisitor {
+    type Value = (f32, f32);
+
+    fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
+        f.write_str("an (f32, f32) tuple")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error> 
+    where A: SeqAccess<'de> {
+        Ok((seq.next_element()?.unwrap(), seq.next_element()?.unwrap()))
+    }
+}
+
+impl<'de> Deserialize<'de> for Vector {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error> 
+    where D: Deserializer<'de> {
+        let tuple = de.deserialize_tuple(2, VectorVisitor)?;
+        Ok(Self::new(tuple.0, tuple.1))
+    }
+}
+
+impl Deref for Vector {
+    type Target = Vector2<f32>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Vector {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<Vector2<f32>> for Vector {
+    fn from(v: Vector2<f32>) -> Self {
+        Self(v)
+    }
+}
+
+impl From<&Vector2<f32>> for Vector {
+    fn from(v: &Vector2<f32>) -> Self {
+        Self(v.clone())
+    }
+}
+
+pub fn register(world: &mut World) {
+    world.insert(StateRes::new());
+    world.insert(StageMarkerAllocator::new());
+    world.register::<StageMarker>();
 }

@@ -10,6 +10,8 @@ use sdl2::ttf::{Sdl2TtfContext, Font};
 
 use nalgebra::Vector2;
 
+use crate::misc::Vector;
+
 pub struct SDLRenderImpl<'a> {
     sprite_cache: SpriteCache<'a>,
     font_cache: FontCache<'a>,
@@ -17,7 +19,7 @@ pub struct SDLRenderImpl<'a> {
 }
 
 impl SDLRenderImpl<'_> {
-    pub fn render(&mut self, sprite_name: &str, sprite_pos: Vector2<f32>, sprite_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
+    pub fn render(&mut self, sprite_name: &str, sprite_pos: Vector, sprite_dim: Vector, cam_pos: Vector, cam_zoom: f32, cam_screen: Vector2<u32>) {
         // Camera transformation
         let pos_x = (((sprite_pos.x - cam_pos.x) / 5.0 * cam_zoom + 1.0) / 2.0 * cam_screen.x as f32) as i32;
         let pos_y = ((-(sprite_pos.y - cam_pos.y + sprite_dim.y) / 5.0 * cam_zoom * (cam_screen.x as f32 / cam_screen.y as f32) + 1.0) / 2.0 * cam_screen.y as f32) as i32;
@@ -27,7 +29,7 @@ impl SDLRenderImpl<'_> {
         self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos_x, pos_y, dim_x, dim_y)).unwrap();
     }
 
-    pub fn write(&mut self, text: &str, font: &str, text_pos: Vector2<f32>, text_dim: Vector2<f32>, cam_pos: Vector2<f32>, cam_zoom: f32, cam_screen: Vector2<u32>) {
+    pub fn write(&mut self, text: &str, font: &str, text_pos: Vector, text_dim: Vector, cam_pos: Vector, cam_zoom: f32, cam_screen: Vector2<u32>) {
         let (font, color) = self.font_cache.get(font);
 
         let text_surface = font.render(text).blended(color.clone()).unwrap();

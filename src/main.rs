@@ -1,4 +1,5 @@
 use std::time::Instant;
+
 use specs::prelude::*;
 
 use nalgebra::Vector2;
@@ -10,6 +11,7 @@ use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
 #[macro_use]
 mod misc;
 use misc::{AppState, StateRes};
+use misc::persist::{save_stage, load_stage};
 
 mod render;
 use render::RenderSys;
@@ -89,6 +91,7 @@ fn main() {
 
     let mut world = World::new();
     render::register(&mut world);
+    misc::register(&mut world);
     dispatcher.setup(&mut world);
 
     // Create entites
@@ -102,6 +105,8 @@ fn main() {
     let mut delta_time;
 
     world.write_resource::<StateRes>().insert("app", AppState::Running);
+
+    load_stage("assets/placeholder/stages/stage.ron", &mut world);
 
     while world.read_resource::<StateRes>().get::<AppState>("app").unwrap() == &AppState::Running {
         // Calculate the time since the last frame and wait to lock to 60fps, if necessary
@@ -122,4 +127,6 @@ fn main() {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
+
+    save_stage("assets/placeholder/stages/quicksave.ron", &mut world);
 }
