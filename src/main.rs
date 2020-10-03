@@ -18,7 +18,7 @@ use render::RenderSys;
 use render::sdl::SDLRenderImpl;
 
 mod input;
-use input::{InputSys, InputRes};
+use input::{InputSys};
 use input::sdl::SDLInputImpl;
 
 mod physics;
@@ -43,9 +43,7 @@ fn main() {
     // Initialise resources
     let sdl_context = sdl2::init().unwrap();
     let mut render = SDLRenderImpl::init(&sdl_context, Vector2::new(800, 600));
-    let input = InputRes {
-        input: SDLInputImpl::init(&sdl_context)
-    };
+    let input = SDLInputImpl::init(&sdl_context);
     let mut physics = PhysicsRes {
         delta_time: 0.0,
         m_world: DefaultMechanicalWorld::new(Vector2::new(0.0, -9.81)),
@@ -74,7 +72,7 @@ fn main() {
     // Initialise systems and set up the game world
     let debug_ui_sys = DebugUISys::new(&mut sound);
     let render_sys = RenderSys::new(render);
-    let input_sys = InputSys::new();
+    let input_sys = InputSys::new(input);
     let network_sys = NetworkSyncSys::new(net);
     let controller_sys = ControllerSys::new();
     let physics_sys = PhysicsSys::new();
@@ -100,7 +98,6 @@ fn main() {
     build_world(&mut world, &mut physics);
  
     // Add resources
-    world.insert(input);
     world.insert(physics);
 
     let mut time = Instant::now();

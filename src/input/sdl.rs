@@ -4,7 +4,7 @@ use sdl2::keyboard::*;
 
 use nalgebra::Vector2;
 
-use crate::input::MouseRes;
+use crate::input::{InputEventQueue, InputEvent};
 use crate::input::key::{KeysRes, Key};
 use crate::misc::{StateRes, AppState};
 use crate::render::CameraRes;
@@ -14,8 +14,7 @@ pub struct SDLInputImpl {
 }
 
 impl SDLInputImpl {
-    pub fn input(&mut self, state: &mut StateRes, camera: &mut CameraRes, keys: &mut KeysRes, mouse: &mut MouseRes) {
-        mouse.0 = None;
+    pub fn input(&mut self, state: &mut StateRes, camera: &mut CameraRes, keys: &mut KeysRes, input_queue: &mut InputEventQueue) {
         for event in self.context.events.poll_iter() {
             match event {
                 Event::Quit {..} => state.insert("app", AppState::Stopping),
@@ -25,9 +24,16 @@ impl SDLInputImpl {
                         _ => {}
                     }
                 },
-                Event::KeyDown { keycode: Some(k), .. } => keys.press(sdl_to_key(k)),
-                Event::KeyUp { keycode: Some(k), .. } => keys.release(sdl_to_key(k)),
-                Event::MouseButtonUp { x, y, .. } => mouse.0 = Some(Vector2::new(x as u32, camera.screen.y - y as u32)),
+                Event::KeyDown { keycode: Some(k), .. } => {
+                    keys.press(sdl_to_key(k));
+                    input_queue.push(InputEvent::KeyDown(sdl_to_key(k)));
+                },
+                Event::KeyUp { keycode: Some(k), .. } => {
+                    keys.release(sdl_to_key(k));
+                    input_queue.push(InputEvent::KeyUp(sdl_to_key(k)));
+                },
+                Event::MouseButtonDown { x, y, .. } => input_queue.push(InputEvent::MouseDown(Vector2::new(x as u32, camera.screen.y - y as u32))),
+                Event::MouseButtonUp { x, y, .. } => input_queue.push(InputEvent::MouseUp(Vector2::new(x as u32, camera.screen.y - y as u32))),
                 _ => {}
             }
         }
