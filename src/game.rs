@@ -13,6 +13,7 @@ use crate::net::{NetworkRequestQueue, NetworkRequest, NetMasterTransformCom};
 use crate::physics::{TransformCom, PhysicsRes};
 use crate::misc::{StateRes, AppState, Vector};
 use crate::game::controller::ControllerCom;
+use crate::misc::persist::{PersistRequestQueue, PersistRequest};
 
 pub struct DebugUISys {
     layer: LayerID,
@@ -23,10 +24,11 @@ impl<'a> System<'a> for DebugUISys {
     type SystemData = (Read<'a, UIEventQueue>,
         Write<'a, SoundRequestQueue>,
         Write<'a, NetworkRequestQueue>,
+        Write<'a, PersistRequestQueue>,
         Write<'a, StateRes>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (ui_events, mut sound_requests, mut net_requests, mut state) = data;
+        let (ui_events, mut sound_requests, mut net_requests, mut persist_requests, mut state) = data;
 
         for event in ui_events.iter() {
             match event {
@@ -45,7 +47,8 @@ impl<'a> System<'a> for DebugUISys {
                     "host" => net_requests.push(NetworkRequest::Open),
                     "debug" => net_requests.push(NetworkRequest::Debug),
                     "quit" => state.insert("app", AppState::Stopping),
-                    "load" => (),
+                    "load" => persist_requests.push(PersistRequest::LoadStage("assets/placeholder/stages/save.ron".to_string())),
+                    "save" => persist_requests.push(PersistRequest::SaveStage("assets/placeholder/stages/save.ron".to_string())),
                     _ => ()
                 }
             }
@@ -88,6 +91,11 @@ impl<'a> System<'a> for DebugUISys {
             .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
             .with(ButtonUICom::new("b", "r", "load"))
             .with(TextUICom::new("Load", "caveat")).build();
+
+        world.create_entity()
+            .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50)))
+            .with(ButtonUICom::new("r", "g", "save"))
+            .with(TextUICom::new("Save", "caveat")).build();
 
         world.create_entity()
             .with(ConstraintCom::new(PositionConstraint::StartPixelOffset(0), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(0), SizeConstraint::Pixels(0)))

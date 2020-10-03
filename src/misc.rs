@@ -1,5 +1,3 @@
-pub mod persist;
-
 use std::fmt::{Debug, Formatter};
 use std::collections::HashMap;
 use std::any::{Any, TypeId};
@@ -176,3 +174,5 @@ pub fn register(world: &mut World) {
     world.insert(StageMarkerAllocator::new());
     world.register::<StageMarker>();
 }
+
+pub mod persist;

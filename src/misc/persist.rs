@@ -10,9 +10,101 @@ use nalgebra::geometry::*;
 use specs::*;
 use specs::saveload::*;
 
+use vitrellogy_macro::DefaultConstructor;
 use crate::physics::{TransformCom, RigidBodyCom, ColliderCom, PhysicsRes};
 use crate::render::SpriteCom;
 use crate::misc::Vector;
+
+event_queue! {
+    PersistRequestQueue: pub enum PersistRequest {
+        SaveStage(String),
+        LoadStage(String)
+    }
+}
+
+#[derive(DefaultConstructor)]
+pub struct PersistSys;
+
+impl<'a> System<'a> for PersistSys {
+    type SystemData = (Entities<'a>,
+        specs::Write<'a, PersistRequestQueue>,
+        WriteStorage<'a, StageMarker>,
+        specs::Write<'a, StageMarkerAllocator>,
+        specs::Write<'a, PhysicsRes>,
+        WriteStorage<'a, TransformCom>,
+        WriteStorage<'a, SpriteCom>,
+        WriteStorage<'a, RigidBodyCom>,
+        WriteStorage<'a, ColliderCom>);
+
+    fn run(&mut self, (entities, mut requests, mut stage_markers, mut stage_marker_alloc, mut physics, mut transforms, mut sprites, mut bodies, mut colliders): Self::SystemData) {
+        for request in requests.iter() {
+            match request {
+                PersistRequest::SaveStage(file) => {
+                    let mut data: Vec<u8> = Vec::new();
+                    let mut ser = ron::Serializer::new(&mut data, None, false).unwrap();
+
+                    let mut seq = ser.serialize_seq(None).unwrap();
+                    for (_marker, transform, sprite, body, collider) in (&stage_markers, (&transforms).maybe(), (&sprites).maybe(), (&bodies).maybe(), (&colliders).maybe()).join() {
+                        seq.serialize_element(&StageEntity {
+                            transform: transform.map(|c| c.clone()),
+                            sprite: sprite.map(|c| c.clone()),
+                            body: body.map(|c| physics.read_rigid_body(c).unwrap().into()),
+                            collider: collider.map(|c| physics.read_collider(c).unwrap().into())
+                        }).unwrap();
+                    }
+                    seq.end().unwrap();
+
+                    let data = String::from_utf8(data).unwrap();
+                    let mut file = File::create(file).unwrap();
+                    file.write_all(data.as_bytes()).unwrap();
+                },
+                PersistRequest::LoadStage(file) => {
+                    let mut file = File::open(file).unwrap();
+                    let mut data = String::new();
+                    file.read_to_string(&mut data).unwrap();
+
+                    let elements: Vec<StageEntity> = ron::from_str(&data).unwrap();
+
+                    for (_marker, entity) in (&stage_markers, &entities).join() {
+                        transforms.remove(entity);
+                        sprites.remove(entity);
+                        bodies.get(entity).map(|body| physics.bodies.remove(body.0));
+                        bodies.remove(entity);
+                        colliders.get(entity).map(|collider| physics.colliders.remove(collider.0));
+                        colliders.remove(entity);
+                    }
+                    stage_markers.clear();
+
+                    for element in elements.iter() {
+                        let entity = entities.create();
+
+                        let mut rb: Option<DefaultBodyHandle> = None;
+
+                        if let Some(transform) = &element.transform {
+                            transforms.insert(entity, transform.clone()).unwrap();
+                        }
+                        if let Some(sprite) = &element.sprite {
+                            sprites.insert(entity, sprite.clone()).unwrap();
+                        }
+                        if let Some(body) = &element.body {
+                            let com = physics.register_rigid_body(body.clone().into());
+                            rb = Some(com.0);
+                            bodies.insert(entity, com).unwrap();
+                        }
+                        if let Some(collider) = &element.collider {
+                            if let Some(rb) = rb {
+                                colliders.insert(entity, physics.register_collider(collider.clone().into_collider(&rb))).unwrap();
+                            }
+                        }
+
+                        stage_marker_alloc.mark(entity, &mut stage_markers);
+                    }
+                }
+            }
+        }
+        requests.clear();
+    }
+}
 
 pub struct StageMarkerType;
 pub type StageMarker = SimpleMarker<StageMarkerType>;
@@ -24,61 +116,6 @@ struct StageEntity {
     sprite: Option<SpriteCom>,
     body: Option<PersistentRigidBody>,
     collider: Option<PersistentCollider>
-}
-
-pub fn load_stage(file: &str, world: &mut World) {
-    let mut file = File::open(file).unwrap();
-    let mut data = String::new();
-    file.read_to_string(&mut data).unwrap();
-
-    let (entities, mut markers, mut allocator, mut physics, mut transforms, mut sprites, mut bodies, mut colliders): (Entities, WriteStorage<StageMarker>, specs::Write<StageMarkerAllocator>, specs::Write<PhysicsRes>, WriteStorage<TransformCom>, WriteStorage<SpriteCom>, WriteStorage<RigidBodyCom>, WriteStorage<ColliderCom>) = world.system_data();
-
-    let elements: Vec<StageEntity> = ron::from_str(&data).unwrap();
-    for element in elements.iter() {
-        let entity = entities.create();
-
-        let mut rb: Option<DefaultBodyHandle> = None;
-
-        if let Some(transform) = &element.transform {
-            transforms.insert(entity, transform.clone()).unwrap();
-        }
-        if let Some(sprite) = &element.sprite {
-            sprites.insert(entity, sprite.clone()).unwrap();
-        }
-        if let Some(body) = &element.body {
-            let com = physics.register_rigid_body(body.clone().into());
-            rb = Some(com.0);
-            bodies.insert(entity, com).unwrap();
-        }
-        if let Some(collider) = &element.collider {
-            if let Some(rb) = rb {
-                colliders.insert(entity, physics.register_collider(collider.clone().into_collider(&rb))).unwrap();
-            }
-        }
-
-        allocator.mark(entity, &mut markers);
-    }
-}
-
-pub fn save_stage(file: &str, world: &mut World) {
-    let mut data: Vec<u8> = Vec::new();
-    let mut ser = ron::Serializer::new(&mut data, None, false).unwrap();
-    let (markers, physics, transforms, sprites, bodies, colliders): (ReadStorage<StageMarker>, specs::Read<PhysicsRes>, ReadStorage<TransformCom>, ReadStorage<SpriteCom>, ReadStorage<RigidBodyCom>, ReadStorage<ColliderCom>) = world.system_data();
-
-    let mut seq = ser.serialize_seq(None).unwrap();
-    for (_marker, transform, sprite, body, collider) in (&markers, (&transforms).maybe(), (&sprites).maybe(), (&bodies).maybe(), (&colliders).maybe()).join() {
-        seq.serialize_element(&StageEntity {
-            transform: transform.map(|c| c.clone()),
-            sprite: sprite.map(|c| c.clone()),
-            body: body.map(|c| physics.read_rigid_body(c).unwrap().into()),
-            collider: collider.map(|c| physics.read_collider(c).unwrap().into())
-        }).unwrap();
-    }
-    seq.end().unwrap();
-
-    let data = String::from_utf8(data).unwrap();
-    let mut file = File::create(file).unwrap();
-    file.write_all(data.as_bytes()).unwrap();
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

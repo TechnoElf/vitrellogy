@@ -11,7 +11,7 @@ use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
 #[macro_use]
 mod misc;
 use misc::{AppState, StateRes};
-use misc::persist::{save_stage, load_stage};
+use misc::persist::{PersistSys, PersistRequestQueue, PersistRequest};
 
 mod render;
 use render::RenderSys;
@@ -79,8 +79,10 @@ fn main() {
     let controller_sys = ControllerSys::new();
     let physics_sys = PhysicsSys::new();
     let sound_sys = SoundSys::new(sound);
+    let persist_sys = PersistSys::new();
     
     let mut dispatcher = DispatcherBuilder::new()
+        .with(persist_sys, "perist", &[])
         .with(network_sys, "network_sync", &[])
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
@@ -105,8 +107,7 @@ fn main() {
     let mut delta_time;
 
     world.write_resource::<StateRes>().insert("app", AppState::Running);
-
-    load_stage("assets/placeholder/stages/stage.ron", &mut world);
+    world.write_resource::<PersistRequestQueue>().push(PersistRequest::LoadStage("assets/placeholder/stages/stage.ron".to_string()));
 
     while world.read_resource::<StateRes>().get::<AppState>("app").unwrap() == &AppState::Running {
         // Calculate the time since the last frame and wait to lock to 60fps, if necessary
@@ -127,6 +128,4 @@ fn main() {
         dispatcher.dispatch(&mut world);
         world.maintain();
     }
-
-    save_stage("assets/placeholder/stages/quicksave.ron", &mut world);
 }
