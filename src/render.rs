@@ -10,6 +10,7 @@ use vitrellogy_macro::DefaultConstructor;
 use crate::physics::TransformCom;
 use crate::render::sdl::SDLRenderImpl;
 use crate::input::{InputEventQueue, InputEvent};
+use crate::input::key::Key;
 use crate::misc::{Convertable, Vector};
 
 #[derive(Debug, DefaultConstructor)]
@@ -43,13 +44,14 @@ impl<'a> System<'a> for RenderSys {
         ReadStorage<'a, TextCom>,
         ReadStorage<'a, ButtonUICom>,
         ReadStorage<'a, TextUICom>,
+        WriteStorage<'a, TextFieldUICom>,
         ReadStorage<'a, StartVerticalGroupCom>,
         ReadStorage<'a, StartHorizontalGroupCom>,
         ReadStorage<'a, EndGroupCom>,
         ReadStorage<'a, ConstraintCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut events, camera, input_events, transforms, sprites, texts, buttons, text_labels, v_group_start, h_group_start, group_end, constraints) = data;
+        let (mut events, camera, input_events, transforms, sprites, texts, buttons, text_labels, mut text_fields, v_group_start, h_group_start, group_end, constraints) = data;
 
         self.renderer.pre();
 
@@ -64,7 +66,7 @@ impl<'a> System<'a> for RenderSys {
         events.clear();
         let mut container: Vec<(Vector2<u32>, Vector2<u32>, Vector2<u32>, bool)> = Vec::new();
         container.push((Vector2::new(0, 0), camera.screen, Vector2::new(0, 0), true));
-        for (constraint, button, text_label, vgs, hgs, ge) in (&constraints, (&buttons).maybe(), (&text_labels).maybe(), (&v_group_start).maybe(), (&h_group_start).maybe(), (&group_end).maybe()).join() {
+        for (constraint, button, text_label, text_fields, vgs, hgs, ge) in (&constraints, (&buttons).maybe(), (&text_labels).maybe(), (&mut text_fields).maybe(), (&v_group_start).maybe(), (&h_group_start).maybe(), (&group_end).maybe()).join() {
             let size = Vector2::new(constraint.x_size.as_pixels(container.last().unwrap().1.x), constraint.y_size.as_pixels(container.last().unwrap().1.y));
             let pos = Vector2::new(constraint.x_pos.as_pixels(size.x, container.last().unwrap().1.x) + container.last().unwrap().0.x, constraint.y_pos.as_pixels(size.y, container.last().unwrap().1.y) + container.last().unwrap().0.y);
 
@@ -99,16 +101,16 @@ impl<'a> System<'a> for RenderSys {
                     let mut pressed = false;
                     for event in input_events.iter() {
                         match event {
-                            InputEvent::MouseUp(m) if container.last_mut().unwrap().2.x < m.x && m.x < container.last_mut().unwrap().2.x + size.x && container.last_mut().unwrap().2.y < m.y && m.y < container.last_mut().unwrap().2.y + size.y => pressed = true,
+                            InputEvent::MouseDown(m) if container.last_mut().unwrap().2.x < m.x && m.x < container.last_mut().unwrap().2.x + size.x && container.last_mut().unwrap().2.y < m.y && m.y < container.last_mut().unwrap().2.y + size.y => pressed = true,
                             _ => ()
                         }
                     }
 
                     if pressed {
                         events.push(UIEvent::ButtonPressed { id: button.element_name.clone() });
-                        self.renderer.render_ss(&button.sprite_pressed, container.last_mut().unwrap().2.convert(), size, camera.screen);
+                        self.renderer.render_ss(&button.sprite_pressed, container.last_mut().unwrap().2.convert(), size);
                     } else {
-                        self.renderer.render_ss(&button.sprite, container.last_mut().unwrap().2.convert(), size, camera.screen);
+                        self.renderer.render_ss(&button.sprite, container.last_mut().unwrap().2.convert(), size);
                     }
                 },
                 None => ()
@@ -116,7 +118,37 @@ impl<'a> System<'a> for RenderSys {
 
             match text_label {
                 Some(text_label) => {
-                    self.renderer.write_ss(&text_label.text, &text_label.font, container.last_mut().unwrap().2.convert(), size, camera.screen);
+                    self.renderer.write_ss(&text_label.text, &text_label.font, container.last_mut().unwrap().2.convert(), size);
+                },
+                None => ()
+            }
+
+            match text_fields {
+                Some(text_field) => {
+                    self.renderer.render_ss(&text_field.background, container.last_mut().unwrap().2.convert(), size);
+                    if self.renderer.write_ss(&text_field.text, &text_field.font, container.last_mut().unwrap().2.convert(), size) {
+                        text_field.text.pop();
+                    }
+
+                    for event in input_events.iter() {
+                        match event {
+                            InputEvent::MouseDown(m) if container.last_mut().unwrap().2.x < m.x && m.x < container.last_mut().unwrap().2.x + size.x && container.last_mut().unwrap().2.y < m.y && m.y < container.last_mut().unwrap().2.y + size.y => {
+                                text_field.captured = true;
+                            },
+                            InputEvent::MouseDown(_) => {
+                                text_field.captured = false;
+                            },
+                            InputEvent::KeyDown(k) if text_field.captured => {
+                                match k {
+                                    Key::Backspace => { text_field.text.pop(); },
+                                    _ => { k.to_char().map(|c| text_field.text.push(c)); }
+                                }
+
+                                events.push(UIEvent::TextChanged { id: text_field.element_name.clone(), text: text_field.text.clone() });
+                            }
+                            _ => ()
+                        }
+                    }
                 },
                 None => ()
             }
@@ -170,7 +202,8 @@ impl TextCom {
 
 event_queue! {
     UIEventQueue: pub enum UIEvent {
-        ButtonPressed { id: String }
+        ButtonPressed { id: String },
+        TextChanged { id: String, text: String }
     }
 }
 
@@ -204,6 +237,28 @@ impl ButtonUICom {
             sprite: sprite.to_string(),
             sprite_pressed: sprite_pressed.to_string(),
             element_name: element_name.to_string()
+        }
+    }
+}
+
+#[derive(Component, Debug)]
+#[storage(DenseVecStorage)]
+pub struct TextFieldUICom {
+    pub background: String,
+    pub text: String,
+    pub font: String,
+    pub element_name: String,
+    pub captured: bool
+}
+
+impl TextFieldUICom {
+    pub fn new(background: &str, text: &str, font: &str, element_name: &str) -> Self {
+        Self {
+            background: background.to_string(),
+            text: text.to_string(),
+            font: font.to_string(),
+            element_name: element_name.to_string(),
+            captured: false
         }
     }
 }
@@ -274,6 +329,7 @@ pub fn register(world: &mut World) {
     world.register::<ConstraintCom>();
     world.register::<TextUICom>();
     world.register::<ButtonUICom>();
+    world.register::<TextFieldUICom>();
     world.register::<StartVerticalGroupCom>();
     world.register::<StartHorizontalGroupCom>();
     world.register::<EndGroupCom>();

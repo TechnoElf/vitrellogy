@@ -32,8 +32,8 @@ impl SDLInputImpl {
                     keys.release(sdl_to_key(k));
                     input_queue.push(InputEvent::KeyUp(sdl_to_key(k)));
                 },
-                Event::MouseButtonDown { x, y, .. } => input_queue.push(InputEvent::MouseDown(Vector2::new(x as u32, camera.screen.y - y as u32))),
-                Event::MouseButtonUp { x, y, .. } => input_queue.push(InputEvent::MouseUp(Vector2::new(x as u32, camera.screen.y - y as u32))),
+                Event::MouseButtonDown { x, y, .. } => input_queue.push(InputEvent::MouseDown(Vector2::new(x as u32, y as u32))),
+                Event::MouseButtonUp { x, y, .. } => input_queue.push(InputEvent::MouseUp(Vector2::new(x as u32, y as u32))),
                 _ => {}
             }
         }
@@ -81,6 +81,7 @@ fn sdl_to_key(k: Keycode) -> Key {
         Keycode::Y => Key::Y,
         Keycode::Z => Key::Z,
         Keycode::Space => Key::Space,
+        Keycode::Backspace => Key::Backspace,
         _ => Key::Unknown
     }
 }

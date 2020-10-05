@@ -55,5 +55,41 @@ pub enum Key {
     X,
     Y,
     Z,
-    Space
+    Space,
+    Backspace
+}
+
+impl Key {
+    pub fn to_char(&self) -> Option<char> {
+        match self {
+            Key::A => Some('a'),
+            Key::B => Some('b'),
+            Key::C => Some('c'),
+            Key::D => Some('d'),
+            Key::E => Some('e'),
+            Key::F => Some('f'),
+            Key::G => Some('g'),
+            Key::H => Some('h'),
+            Key::I => Some('i'),
+            Key::J => Some('j'),
+            Key::K => Some('k'),
+            Key::L => Some('l'),
+            Key::M => Some('m'),
+            Key::N => Some('n'),
+            Key::O => Some('o'),
+            Key::P => Some('p'),
+            Key::Q => Some('q'),
+            Key::R => Some('r'),
+            Key::S => Some('s'),
+            Key::T => Some('t'),
+            Key::U => Some('u'),
+            Key::V => Some('v'),
+            Key::W => Some('w'),
+            Key::X => Some('x'),
+            Key::Y => Some('y'),
+            Key::Z => Some('z'),
+            Key::Space => Some(' '),
+            _ => None
+        }
+    }
 }

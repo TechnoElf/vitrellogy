@@ -46,25 +46,30 @@ impl SDLRenderImpl<'_> {
         self.context.canvas.copy(&text_texture, None, Rect::new(pos_x, pos_y, dim_x, dim_y)).unwrap();
     }
 
-    pub fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vector2<i32>, sprite_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
-        let pos = Vector2::new(sprite_pos.x, cam_screen.y as i32 - (sprite_pos.y + sprite_dim.y as i32));
+    pub fn render_ss(&mut self, sprite_name: &str, sprite_pos: Vector2<i32>, sprite_dim: Vector2<u32>) {
+        let pos = Vector2::new(sprite_pos.x, sprite_pos.y);
         let dim = sprite_dim;
 
         self.context.canvas.copy(self.sprite_cache.get(sprite_name), None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
     }
 
-    pub fn write_ss(&mut self, text: &str, font: &str, text_pos: Vector2<i32>, text_dim: Vector2<u32>, cam_screen: Vector2<u32>) {
+    pub fn write_ss(&mut self, text: &str, font: &str, text_pos: Vector2<i32>, text_dim: Vector2<u32>) -> bool {
         let (font, color) = self.font_cache.get(font);
 
-        let text_surface = font.render(text).blended(color.clone()).unwrap();
-        let (w, h) = text_surface.size();
-        let text_texture = self.context.texture_creator.create_texture_from_surface(text_surface).unwrap();
+        match font.render(text).blended(color.clone()) {
+            Ok(text_surface) => {
+                let (w, h) = text_surface.size();
+                let text_texture = self.context.texture_creator.create_texture_from_surface(text_surface).unwrap();
 
-        let text_dim = Vector2::new((text_dim.y as f32 * (w as f32 / h as f32)) as u32, text_dim.y);
-        let pos = Vector2::new(text_pos.x, cam_screen.y as i32 - (text_pos.y + text_dim.y as i32));
-        let dim = text_dim;
+                let dim = Vector2::new((text_dim.y as f32 * (w as f32 / h as f32)) as u32, text_dim.y);
+                let pos = Vector2::new(text_pos.x, text_pos.y);
 
-        self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
+                self.context.canvas.copy(&text_texture, None, Rect::new(pos.x, pos.y, dim.x, dim.y)).unwrap();
+
+                dim.x > text_dim.x
+            },
+            Err(_) => false
+        }
     }
 
     pub fn pre(&mut self) {
