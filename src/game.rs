@@ -64,7 +64,7 @@ impl<'a> System<'a> for DebugUISys {
         Self::SystemData::setup(world);
 
         world.create_entity()
-            .with(ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(200), SizeConstraint::NegativePixels(10)))
+            .with(ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(200), SizeConstraint::Proportion(1.0)))
             .with(StartVerticalGroupCom::new()).build();
 
         world.create_entity()

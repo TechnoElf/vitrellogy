@@ -59,7 +59,10 @@ impl<'a> System<'a> for PersistSys {
                     file.write_all(data.as_bytes()).unwrap();
                 },
                 PersistRequest::LoadStage(file) => {
-                    let mut file = File::open(file).unwrap();
+                    let mut file = match File::open(file) {
+                        Ok(file) => file,
+                        Err(_) => { println!("Could not open {}", file); continue; }
+                    };
                     let mut data = String::new();
                     file.read_to_string(&mut data).unwrap();
 

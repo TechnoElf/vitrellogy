@@ -10,7 +10,7 @@ use vitrellogy_macro::DefaultConstructor;
 use crate::physics::TransformCom;
 use crate::render::sdl::SDLRenderImpl;
 use crate::input::{InputEventQueue, InputEvent};
-use crate::input::key::Key;
+use crate::input::key::{Key, KeysRes};
 use crate::misc::{Convertable, Vector};
 
 #[derive(Debug, DefaultConstructor)]
@@ -39,6 +39,7 @@ impl<'a> System<'a> for RenderSys {
     type SystemData = (Write<'a, UIEventQueue>,
         Read<'a, CameraRes>,
         Read<'a, InputEventQueue>,
+        Read<'a, KeysRes>,
         ReadStorage<'a, TransformCom>,
         ReadStorage<'a, SpriteCom>,
         ReadStorage<'a, TextCom>,
@@ -51,7 +52,7 @@ impl<'a> System<'a> for RenderSys {
         ReadStorage<'a, ConstraintCom>);
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut events, camera, input_events, transforms, sprites, texts, buttons, text_labels, mut text_fields, v_group_start, h_group_start, group_end, constraints) = data;
+        let (mut events, camera, input_events, keys, transforms, sprites, texts, buttons, text_labels, mut text_fields, v_group_start, h_group_start, group_end, constraints) = data;
 
         self.renderer.pre();
 
@@ -141,7 +142,7 @@ impl<'a> System<'a> for RenderSys {
                             InputEvent::KeyDown(k) if text_field.captured => {
                                 match k {
                                     Key::Backspace => { text_field.text.pop(); },
-                                    _ => { k.to_char().map(|c| text_field.text.push(c)); }
+                                    _ => { k.to_char(keys.pressed(Key::Shift)).map(|c| text_field.text.push(c)); }
                                 }
 
                                 events.push(UIEvent::TextChanged { id: text_field.element_name.clone(), text: text_field.text.clone() });
