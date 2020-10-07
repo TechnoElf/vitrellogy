@@ -174,6 +174,7 @@ pub struct SpriteCom {
     pub dim: Vector
 }
 
+#[allow(dead_code)]
 impl SpriteCom {
     pub fn new(name: &str, dim: Vector) -> Self {
         Self {
@@ -183,7 +184,7 @@ impl SpriteCom {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
 #[storage(DenseVecStorage)]
 pub struct TextCom {
     pub text: String,
@@ -191,6 +192,7 @@ pub struct TextCom {
     pub dim: Vector
 }
 
+#[allow(dead_code)]
 impl TextCom {
     pub fn new(text: &str, font: &str, dim: Vector) -> Self {
         Self {

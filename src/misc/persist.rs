@@ -12,7 +12,7 @@ use specs::saveload::*;
 
 use vitrellogy_macro::DefaultConstructor;
 use crate::physics::{TransformCom, RigidBodyCom, ColliderCom, PhysicsRes};
-use crate::render::SpriteCom;
+use crate::render::{SpriteCom, TextCom};
 use crate::misc::Vector;
 
 event_queue! {
@@ -33,10 +33,11 @@ impl<'a> System<'a> for PersistSys {
         specs::Write<'a, PhysicsRes>,
         WriteStorage<'a, TransformCom>,
         WriteStorage<'a, SpriteCom>,
+        WriteStorage<'a, TextCom>,
         WriteStorage<'a, RigidBodyCom>,
         WriteStorage<'a, ColliderCom>);
 
-    fn run(&mut self, (entities, mut requests, mut stage_markers, mut stage_marker_alloc, mut physics, mut transforms, mut sprites, mut bodies, mut colliders): Self::SystemData) {
+    fn run(&mut self, (entities, mut requests, mut stage_markers, mut stage_marker_alloc, mut physics, mut transforms, mut sprites, mut texts, mut bodies, mut colliders): Self::SystemData) {
         for request in requests.iter() {
             match request {
                 PersistRequest::SaveStage(file) => {
@@ -44,10 +45,11 @@ impl<'a> System<'a> for PersistSys {
                     let mut ser = ron::Serializer::new(&mut data, None, false).unwrap();
 
                     let mut seq = ser.serialize_seq(None).unwrap();
-                    for (_marker, transform, sprite, body, collider) in (&stage_markers, (&transforms).maybe(), (&sprites).maybe(), (&bodies).maybe(), (&colliders).maybe()).join() {
+                    for (_marker, transform, sprite, text, body, collider) in (&stage_markers, (&transforms).maybe(), (&sprites).maybe(), (&texts).maybe(), (&bodies).maybe(), (&colliders).maybe()).join() {
                         seq.serialize_element(&StageEntity {
                             transform: transform.map(|c| c.clone()),
                             sprite: sprite.map(|c| c.clone()),
+                            text: text.map(|c| c.clone()),
                             body: body.map(|c| physics.read_rigid_body(c).unwrap().into()),
                             collider: collider.map(|c| physics.read_collider(c).unwrap().into())
                         }).unwrap();
@@ -89,6 +91,9 @@ impl<'a> System<'a> for PersistSys {
                         if let Some(sprite) = &element.sprite {
                             sprites.insert(entity, sprite.clone()).unwrap();
                         }
+                        if let Some(text) = &element.text {
+                            texts.insert(entity, text.clone()).unwrap();
+                        }
                         if let Some(body) = &element.body {
                             let com = physics.register_rigid_body(body.clone().into());
                             rb = Some(com.0);
@@ -117,6 +122,7 @@ pub type StageMarkerAllocator = SimpleMarkerAllocator<StageMarkerType>;
 struct StageEntity {
     transform: Option<TransformCom>,
     sprite: Option<SpriteCom>,
+    text: Option<TextCom>,
     body: Option<PersistentRigidBody>,
     collider: Option<PersistentCollider>
 }
@@ -137,7 +143,7 @@ impl From<&RigidBody<f32>> for PersistentRigidBody {
 
 impl Into<RigidBody<f32>> for PersistentRigidBody {
     fn into(self) -> RigidBody<f32> {
-        RigidBodyDesc::new().status(self.status.into()).build()
+        RigidBodyDesc::new().status(self.status.into()).mass(1.0).build()
     }
 }
 
