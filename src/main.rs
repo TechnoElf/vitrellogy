@@ -104,7 +104,7 @@ fn main() {
     let mut delta_time;
 
     world.write_resource::<StateRes>().insert("app", AppState::Running);
-    world.write_resource::<PersistRequestQueue>().push(PersistRequest::LoadStage("assets/placeholder/stages/stage.ron".to_string()));
+    world.write_resource::<PersistRequestQueue>().push(PersistRequest::LoadStage("assets/placeholder/stages/stage.mst".to_string()));
 
     while world.read_resource::<StateRes>().get::<AppState>("app").unwrap() == &AppState::Running {
         // Calculate the time since the last frame and wait to lock to 60fps, if necessary

@@ -46,8 +46,8 @@ impl<'a> System<'a> for DebugUISys {
                     "host" => net_requests.push(NetworkRequest::Open),
                     "debug" => net_requests.push(NetworkRequest::Debug),
                     "quit" => state.insert("app", AppState::Stopping),
-                    "load" => persist_requests.push(PersistRequest::LoadStage(format!("assets/placeholder/stages/{}.ron", self.file))),
-                    "save" => persist_requests.push(PersistRequest::SaveStage(format!("assets/placeholder/stages/{}.ron", self.file))),
+                    "load" => persist_requests.push(PersistRequest::LoadStage(format!("assets/placeholder/stages/{}.mst", self.file))),
+                    "save" => persist_requests.push(PersistRequest::SaveStage(format!("assets/placeholder/stages/{}.mst", self.file))),
                     _ => ()
                 }
                 UIEvent::TextChanged { id, text } => match id.as_str() {

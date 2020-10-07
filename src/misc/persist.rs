@@ -1,7 +1,6 @@
 use std::fs::File;
-use std::io::{Write, Read};
 
-use serde::{Serialize, Deserialize, ser::Serializer, ser::SerializeSeq};
+use serde::{Serialize, Deserialize};
 
 use nphysics2d::object::*;
 use ncollide2d::shape::*;
@@ -41,34 +40,28 @@ impl<'a> System<'a> for PersistSys {
         for request in requests.iter() {
             match request {
                 PersistRequest::SaveStage(file) => {
-                    let mut data: Vec<u8> = Vec::new();
-                    let mut ser = ron::Serializer::new(&mut data, None, false).unwrap();
+                    let file = File::create(file).unwrap();
 
-                    let mut seq = ser.serialize_seq(None).unwrap();
+                    let mut elements: Vec<StageEntity> = Vec::new();
                     for (_marker, transform, sprite, text, body, collider) in (&stage_markers, (&transforms).maybe(), (&sprites).maybe(), (&texts).maybe(), (&bodies).maybe(), (&colliders).maybe()).join() {
-                        seq.serialize_element(&StageEntity {
+                        elements.push(StageEntity {
                             transform: transform.map(|c| c.clone()),
                             sprite: sprite.map(|c| c.clone()),
                             text: text.map(|c| c.clone()),
                             body: body.map(|c| physics.read_rigid_body(c).unwrap().into()),
                             collider: collider.map(|c| physics.read_collider(c).unwrap().into())
-                        }).unwrap();
+                        });
                     }
-                    seq.end().unwrap();
 
-                    let data = String::from_utf8(data).unwrap();
-                    let mut file = File::create(file).unwrap();
-                    file.write_all(data.as_bytes()).unwrap();
+                    bincode::serialize_into(&file, &elements).unwrap();
                 },
                 PersistRequest::LoadStage(file) => {
-                    let mut file = match File::open(file) {
+                    let file = match File::open(file) {
                         Ok(file) => file,
                         Err(_) => { println!("Could not open {}", file); continue; }
                     };
-                    let mut data = String::new();
-                    file.read_to_string(&mut data).unwrap();
 
-                    let elements: Vec<StageEntity> = ron::from_str(&data).unwrap();
+                    let elements: Vec<StageEntity> = bincode::deserialize_from(&file).unwrap();
 
                     for (_marker, entity) in (&stage_markers, &entities).join() {
                         transforms.remove(entity);
