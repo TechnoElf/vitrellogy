@@ -169,6 +169,12 @@ impl From<&Vector2<f32>> for Vector {
     }
 }
 
+impl Into<Vector2<f32>> for Vector {
+    fn into(self) -> Vector2<f32> {
+        *self
+    }
+}
+
 pub fn register(world: &mut World) {
     world.insert(StateRes::new());
     world.insert(StageMarkerAllocator::new());

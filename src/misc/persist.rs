@@ -173,13 +173,16 @@ enum BodyStatusDef {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum ShapeDef {
-    Cuboid(CuboidDef)
+    Cuboid(CuboidDef),
+    ConvexPolygon(ConvexPolygonDef)
 }
 
 impl From<&ShapeHandle<f32>> for ShapeDef {
     fn from(s: &ShapeHandle<f32>) -> Self {
         if s.is_shape::<Cuboid<f32>>() {
             ShapeDef::Cuboid(s.as_shape::<Cuboid<f32>>().unwrap().into())
+        } else if s.is_shape::<ConvexPolygon<f32>>() {
+            ShapeDef::ConvexPolygon(s.as_shape::<ConvexPolygon<f32>>().unwrap().into())
         } else {
             panic!("attempted to serialize unknown shape");
         }
@@ -189,7 +192,8 @@ impl From<&ShapeHandle<f32>> for ShapeDef {
 impl Into<ShapeHandle<f32>> for ShapeDef {
     fn into(self) -> ShapeHandle<f32> {
         match self {
-            ShapeDef::Cuboid(s) => ShapeHandle::new::<Cuboid<f32>>(s.into())
+            ShapeDef::Cuboid(s) => ShapeHandle::new::<Cuboid<f32>>(s.into()),
+            ShapeDef::ConvexPolygon(s) => ShapeHandle::new::<ConvexPolygon<f32>>(s.into())
         }
     }
 }
@@ -210,6 +214,25 @@ impl From<&Cuboid<f32>> for CuboidDef {
 impl Into<Cuboid<f32>> for CuboidDef {
     fn into(self) -> Cuboid<f32> {
         Cuboid::new(*self.half_extents)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ConvexPolygonDef {
+    points: Vec<Vector>
+}
+
+impl From<&ConvexPolygon<f32>> for ConvexPolygonDef {
+    fn from(p: &ConvexPolygon<f32>) -> Self {
+        Self {
+            points: p.points().iter().map(|p| Vector::from(p.coords)).collect()
+        }
+    }
+}
+
+impl Into<ConvexPolygon<f32>> for ConvexPolygonDef {
+    fn into(self) -> ConvexPolygon<f32> {
+        ConvexPolygon::try_new(self.points.iter().map(|p| Point::from(p.0)).collect()).unwrap()
     }
 }
 

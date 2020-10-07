@@ -3,8 +3,6 @@ pub mod packet;
 
 use std::net::SocketAddr;
 
-use nalgebra::Vector2;
-
 use specs::*;
 use specs::world::Builder;
 
@@ -103,7 +101,7 @@ impl<'a> System<'a> for NetworkSyncSys {
                 },
                 NetworkEvent::PeerConnected(origin_id) => {
                     let rb = physics.create_rigid_body_static();
-                    let col = physics.create_collider_rectangle(Vector2::new(2.0, 2.0), &rb);
+                    let col = physics.create_collider_rectangle(Vector::new(1.9, 1.9), Vector::new(0.05, 0.05), &rb);
                     updater.create_entity(&entities).with(SpriteCom::new("wizard", Vector::new(2.0, 2.0)))
                         .with(TransformCom::new(Vector::new(0.0, 0.0)))
                         .with(NetSlaveTransformCom::new(origin_id.clone()))

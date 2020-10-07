@@ -2,9 +2,8 @@ pub mod controller;
 
 use std::net::ToSocketAddrs;
 
-use nalgebra::Vector2;
-
 use specs::*;
+use specs::saveload::MarkedBuilder;
 
 use crate::sound::{SoundRequestQueue, SoundRequest, MusicID, LayerID};
 use crate::sound::imp::SoundImp;
@@ -13,7 +12,7 @@ use crate::net::{NetworkRequestQueue, NetworkRequest, NetMasterTransformCom};
 use crate::physics::{TransformCom, PhysicsRes};
 use crate::misc::{StateRes, AppState, Vector};
 use crate::game::controller::ControllerCom;
-use crate::misc::persist::{PersistRequestQueue, PersistRequest};
+use crate::misc::persist::{PersistRequestQueue, PersistRequest, StageMarker};
 
 pub struct DebugUISys {
     layer: LayerID,
@@ -126,18 +125,13 @@ pub fn build_world(world: &mut World, physics: &mut PhysicsRes) {
     world.create_entity().with(TextCom::new("Sphinx of black quartz, judge my vow", "caveat", Vector::new(1.0, 1.0)))
         .with(TransformCom::new(Vector::new(1.0, 15.0))).build();
     let rb = physics.create_rigid_body();
-    let col = physics.create_collider_rectangle(Vector2::new(5.0, 1.0), &rb);
+    let col = physics.create_collider_rectangle(Vector::new(5.0, 1.0), Vector::new(0.0, 0.0), &rb);
     world.create_entity().with(TextCom::new("Vitrellogy", "nemoy", Vector::new(1.0, 1.0)))
         .with(TransformCom::new(Vector::new(7.0, 6.0)))
         .with(rb)
         .with(col).build();
     world.create_entity().with(TextCom::new("Vitrellogy", "patrickhand", Vector::new(1.0, 1.0)))
         .with(TransformCom::new(Vector::new(1.0, 0.0))).build();
-
-    world.create_entity().with(SpriteCom::new("tree", Vector::new(4.0, 4.0)))
-        .with(TransformCom::new(Vector::new(4.0, 4.0))).build();
-    world.create_entity().with(SpriteCom::new("tree", Vector::new(4.0, 4.0)))
-        .with(TransformCom::new(Vector::new(11.0, 4.0))).build();
 
     world.create_entity().with(SpriteCom::new("bolt0", Vector::new(1.0, 1.0)))
         .with(TransformCom::new(Vector::new(2.0, 5.0))).build();
@@ -149,7 +143,7 @@ pub fn build_world(world: &mut World, physics: &mut PhysicsRes) {
         .with(TransformCom::new(Vector::new(2.0, 6.0))).build();
 
     let rb = physics.create_rigid_body();
-    let col = physics.create_collider_rectangle(Vector2::new(1.9, 1.9), &rb);
+    let col = physics.create_collider_rectangle(Vector::new(1.9, 1.9), Vector::new(0.05, 0.05), &rb);
     world.create_entity().with(SpriteCom::new("wizard", Vector::new(2.0, 2.0)))
         .with(TransformCom::new(Vector::new(0.0, 1.0)))
         .with(ControllerCom::new())

@@ -3,12 +3,12 @@ use serde::{Serialize, Deserialize};
 use specs::*;
 use specs::storage::ComponentEvent;
 
-use nalgebra::{Isometry2, Vector2};
+use nalgebra::{Isometry2, Vector2, Point};
 use nphysics2d::object::*;
 use nphysics2d::force_generator::DefaultForceGeneratorSet;
 use nphysics2d::joint::DefaultJointConstraintSet;
 use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
-use ncollide2d::shape::{ShapeHandle, Shape, Cuboid};
+use ncollide2d::shape::{ShapeHandle, Shape, Cuboid, ConvexPolygon};
 
 use vitrellogy_macro::DefaultConstructor;
 
@@ -150,8 +150,12 @@ impl PhysicsRes {
         ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(shape)).build(BodyPartHandle(rb.0, 0))))
     }
 
-    pub fn create_collider_rectangle(&mut self, dim: Vector2<f32>, rb: &RigidBodyCom) -> ColliderCom {
-        ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(Cuboid::new(dim / 2.0))).position(Isometry2::new(dim / 2.0, 0.0)).build(BodyPartHandle(rb.0, 0))))
+    pub fn create_collider_rectangle(&mut self, dim: Vector, offset: Vector, rb: &RigidBodyCom) -> ColliderCom {
+        ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(Cuboid::new(*dim / 2.0))).position(Isometry2::new(*dim / 2.0 + *offset, 0.0)).build(BodyPartHandle(rb.0, 0))))
+    }
+
+    pub fn create_collider_triangle(&mut self, point0: Vector, point1: Vector, point2: Vector, rb: &RigidBodyCom) -> ColliderCom {
+        ColliderCom(self.colliders.insert(ColliderDesc::new(ShapeHandle::new(ConvexPolygon::try_new(vec![Point::from(*point0), Point::from(*point1), Point::from(*point2)]).unwrap())).position(Isometry2::new(Vector2::new(0.0, 0.0), 0.0)).build(BodyPartHandle(rb.0, 0))))
     }
 
     pub fn write_rigid_body(&mut self, rb: &RigidBodyCom) -> Option<&mut RigidBody<f32>> {
