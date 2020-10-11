@@ -312,7 +312,8 @@ impl PositionConstraint {
 pub enum SizeConstraint {
     Proportion(f32),
     Pixels(u32),
-    NegativePixels(u32)
+    NegativePixels(u32),
+    Fill
 }
 
 impl SizeConstraint {
@@ -320,7 +321,8 @@ impl SizeConstraint {
         match self {
             SizeConstraint::Proportion(proportion) => (proportion * container_size as f32).floor() as u32,
             SizeConstraint::Pixels(pixels) => pixels.clone(),
-            SizeConstraint::NegativePixels(pixels) => container_size - pixels.clone()
+            SizeConstraint::NegativePixels(pixels) => container_size - pixels.clone(),
+            SizeConstraint::Fill => container_size
         }
     }
 }

@@ -33,8 +33,7 @@ use sound::SoundSys;
 use sound::imp::SoundImp;
 
 mod game;
-use game::{DebugUISys, build_world};
-use game::controller::ControllerSys;
+use game::{DebugUISys, ControllerSys, GameManagerSys};
 
 const TARGET_FRAME_RATE: f32 = 60.0;
 const TARGET_FRAME_TIME: f32 = 1.0 / TARGET_FRAME_RATE;
@@ -44,7 +43,7 @@ fn main() {
     let sdl_context = sdl2::init().unwrap();
     let mut render = SDLRenderImpl::init(&sdl_context, Vector2::new(800, 600));
     let input = SDLInputImpl::init(&sdl_context);
-    let mut physics = PhysicsRes {
+    let physics = PhysicsRes {
         delta_time: 0.0,
         m_world: DefaultMechanicalWorld::new(Vector2::new(0.0, -9.81)),
         g_world: DefaultGeometricalWorld::new(),
@@ -65,6 +64,7 @@ fn main() {
     render.add_sprite("r", "assets/placeholder/sprites/32x32-w-r.png");
     render.add_sprite("g", "assets/placeholder/sprites/32x32-w-g.png");
     render.add_sprite("b", "assets/placeholder/sprites/32x32-w-b.png");
+    render.add_sprite("blank", "assets/placeholder/sprites/blank.png");
     render.add_font("caveat", "assets/placeholder/fonts/caveat.ttf", 64, 10, 10, 10);
     render.add_font("nemoy", "assets/placeholder/fonts/nemoy.otf", 64, 200, 128, 255);
     render.add_font("patrickhand", "assets/placeholder/fonts/patrickhand.ttf", 64, 255, 255, 255);
@@ -78,6 +78,7 @@ fn main() {
     let physics_sys = PhysicsSys::new();
     let sound_sys = SoundSys::new(sound);
     let persist_sys = PersistSys::new();
+    let game_sys = GameManagerSys::new();
     
     let mut dispatcher = DispatcherBuilder::new()
         .with(persist_sys, "perist", &[])
@@ -85,6 +86,7 @@ fn main() {
         .with(controller_sys, "controller", &[])
         .with(physics_sys, "physics", &["controller", "network_sync"])
         .with(debug_ui_sys, "debug_ui", &[])
+        .with(game_sys, "game_manager", &[])
         .with_thread_local(input_sys)
         .with_thread_local(sound_sys)
         .with_thread_local(render_sys).build();
@@ -94,9 +96,6 @@ fn main() {
     misc::register(&mut world);
     dispatcher.setup(&mut world);
 
-    // Create entites
-    build_world(&mut world, &mut physics);
- 
     // Add resources
     world.insert(physics);
 
