@@ -1,36 +1,17 @@
 use std::time::Instant;
 
-use specs::prelude::*;
-
-use nalgebra::Vector2;
-use nphysics2d::object::{DefaultBodySet, DefaultColliderSet};
-use nphysics2d::force_generator::DefaultForceGeneratorSet;
-use nphysics2d::joint::DefaultJointConstraintSet;
-use nphysics2d::world::{DefaultMechanicalWorld, DefaultGeometricalWorld};
-
-#[macro_use]
-mod misc;
-use misc::{AppState, StateRes};
-use misc::persist::{PersistSys, PersistRequestQueue, PersistRequest};
-
-mod render;
-use render::RenderSys;
-use render::sdl::SDLRenderImpl;
-
-mod input;
-use input::{InputSys};
-use input::sdl::SDLInputImpl;
-
-mod physics;
-use physics::{PhysicsSys, PhysicsRes};
-
-mod net;
-use net:: NetworkSyncSys;
-use net::imp::NetworkImp;
-
-mod sound;
-use sound::SoundSys;
-use sound::imp::SoundImp;
+use invader::ecs::*;
+use invader::misc::*;
+use invader::misc::persist::*;
+use invader::render::*;
+use invader::render::sdl::*;
+use invader::physics::*;
+use invader::net::*;
+use invader::net::imp::*;
+use invader::input::*;
+use invader::input::sdl::*;
+use invader::sound::*;
+use invader::sound::imp::*;
 
 mod game;
 use game::{DebugUISys, ControllerSys, GameManagerSys};
@@ -41,17 +22,9 @@ const TARGET_FRAME_TIME: f32 = 1.0 / TARGET_FRAME_RATE;
 fn main() {
     // Initialise resources
     let sdl_context = sdl2::init().unwrap();
-    let mut render = SDLRenderImpl::init(&sdl_context, Vector2::new(800, 600));
+    let mut render = SDLRenderImpl::init(&sdl_context, Vector::new(800.0, 600.0).convert());
     let input = SDLInputImpl::init(&sdl_context);
-    let physics = PhysicsRes {
-        delta_time: 0.0,
-        m_world: DefaultMechanicalWorld::new(Vector2::new(0.0, -9.81)),
-        g_world: DefaultGeometricalWorld::new(),
-        bodies: DefaultBodySet::new(),
-        colliders: DefaultColliderSet::new(),
-        constraints: DefaultJointConstraintSet::new(),
-        forces: DefaultForceGeneratorSet::new()
-    };
+    let physics = PhysicsRes::new();
     let net = NetworkImp::new();
     let mut sound = SoundImp::new();
 
@@ -92,8 +65,8 @@ fn main() {
         .with_thread_local(render_sys).build();
 
     let mut world = World::new();
-    render::register(&mut world);
-    misc::register(&mut world);
+    invader::render::register(&mut world);
+    invader::misc::register(&mut world);
     dispatcher.setup(&mut world);
 
     // Add resources
@@ -113,7 +86,7 @@ fn main() {
         }
         time = Instant::now();
 
-        if delta_time > TARGET_FRAME_TIME + 0.001 {
+        if delta_time > TARGET_FRAME_TIME * 2.0 {
             //println!("dt={}", delta_time);
             delta_time = 0.0;
         }

@@ -1,32 +1,27 @@
 use std::net::ToSocketAddrs;
 use std::cmp::Ordering;
 
-use nalgebra::Vector2;
-use nphysics2d::math::{Force, ForceType};
-use nphysics2d::object::Body;
-
-use specs::*;
-
-use vitrellogy_macro::DefaultConstructor;
-use crate::sound::{SoundRequestQueue, SoundRequest, MusicID, LayerID};
-use crate::sound::imp::SoundImp;
-use crate::render::{CameraRes, UIEventQueue, UIEvent, ConstraintCom, PositionConstraint, SizeConstraint, ButtonUICom, TextUICom, SpriteCom, StartVerticalGroupCom, EndGroupCom, TextFieldUICom};
-use crate::net::{NetworkRequestQueue, NetworkRequest, NetMasterTransformCom};
-use crate::physics::{TransformCom, PhysicsRes, RigidBodyCom, ColliderCom};
-use crate::misc::{StateRes, AppState, Vector};
-use crate::misc::persist::{PersistRequestQueue, PersistRequest};
-use crate::input::key::{KeysRes, Key};
-use crate::input::{InputEvent, InputEventQueue};
+use invader::macros::*;
+use invader::ecs::*;
+use invader::misc::*;
+use invader::misc::persist::*;
+use invader::render::*;
+use invader::physics::*;
+use invader::net::*;
+use invader::input::*;
+use invader::input::key::*;
+use invader::sound::*;
+use invader::sound::imp::*;
 
 #[derive(DefaultConstructor)]
 pub struct GameManagerSys;
 
 impl<'a> System<'a> for GameManagerSys {
     type SystemData = (Entities<'a>,
-        Write<'a, StateRes>,
-        Read<'a, UIEventQueue>,
-        Write<'a, PhysicsRes>,
-        Write<'a, CameraRes>,
+        WriteResource<'a, StateRes>,
+        ReadResource<'a, UIEventQueue>,
+        WriteResource<'a, PhysicsRes>,
+        WriteResource<'a, CameraRes>,
         WriteStorage<'a, TransformCom>,
         WriteStorage<'a, SpriteCom>,
         WriteStorage<'a, PlayerMarker>,
@@ -133,12 +128,12 @@ pub struct DebugUISys {
 
 impl<'a> System<'a> for DebugUISys {
     type SystemData = (Entities<'a>,
-        Read<'a, UIEventQueue>,
-        Write<'a, SoundRequestQueue>,
-        Write<'a, NetworkRequestQueue>,
-        Write<'a, PersistRequestQueue>,
-        Write<'a, StateRes>,
-        Read<'a, InputEventQueue>,
+        ReadResource<'a, UIEventQueue>,
+        WriteResource<'a, SoundRequestQueue>,
+        WriteResource<'a, NetworkRequestQueue>,
+        WriteResource<'a, PersistRequestQueue>,
+        WriteResource<'a, StateRes>,
+        ReadResource<'a, InputEventQueue>,
         WriteStorage<'a, DebugUIMarker>,
         WriteStorage<'a, ConstraintCom>,
         WriteStorage<'a, StartVerticalGroupCom>,
@@ -271,9 +266,9 @@ impl DebugUISys {
 pub struct ControllerSys;
 
 impl<'a> System<'a> for ControllerSys {
-    type SystemData = (Read<'a, KeysRes>,
-        Write<'a, PhysicsRes>,
-        Write<'a, CameraRes>,
+    type SystemData = (ReadResource<'a, KeysRes>,
+        WriteResource<'a, PhysicsRes>,
+        WriteResource<'a, CameraRes>,
         ReadStorage<'a, PlayerMarker>,
         ReadStorage<'a, RigidBodyCom>,
         ReadStorage<'a, TransformCom>);
@@ -295,13 +290,13 @@ impl<'a> System<'a> for ControllerSys {
 
         for (_controller, rigid_body) in (&controllers, &rigid_bodies).join() {
             match physics.write_rigid_body(rigid_body) {
-                Some(rb) => rb.apply_force(0, &Force::linear(Vector2::new(horizontal, vertical)), ForceType::Impulse, true),
+                Some(rb) => rb.apply_force(0, &Force::linear(*Vector::new(horizontal, vertical)), ForceType::Impulse, true),
                 None => ()
             }
         }
 
         for (_controller, transform) in (&controllers, &transforms).join() {
-            let centre = *transform.pos + Vector2::new(1.0, 1.0);
+            let centre = *transform.pos + *Vector::new(1.0, 1.0);
             
             match (centre.x - camera.pos.x).partial_cmp(&0.0).unwrap() {
                 Ordering::Greater if centre.x - camera.pos.x > 1.0 => camera.pos.x += centre.x - camera.pos.x - 1.0,

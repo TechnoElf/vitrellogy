@@ -245,6 +245,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "invader"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "invader-macro",
+ "nalgebra",
+ "ncollide2d",
+ "nphysics2d",
+ "num-traits",
+ "rand",
+ "sdl2",
+ "serde",
+ "specs",
+]
+
+[[package]]
+name = "invader-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -873,25 +898,8 @@ checksum = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
 name = "vitrellogy"
 version = "0.1.0"
 dependencies = [
- "bincode",
- "nalgebra",
- "ncollide2d",
- "nphysics2d",
- "num-traits",
- "rand",
+ "invader",
  "sdl2",
- "serde",
- "specs",
- "vitrellogy-macro",
-]
-
-[[package]]
-name = "vitrellogy-macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
