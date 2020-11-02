@@ -10,8 +10,6 @@ use invader::physics::*;
 use invader::net::*;
 use invader::input::*;
 use invader::input::key::*;
-use invader::sound::*;
-use invader::sound::imp::*;
 
 #[derive(DefaultConstructor)]
 pub struct GameManagerSys;
@@ -121,15 +119,12 @@ impl<'a> System<'a> for GameManagerSys {
 
 pub struct DebugUISys {
     active: bool,
-    layer: LayerID,
-    music: MusicID,
     file: String
 }
 
 impl<'a> System<'a> for DebugUISys {
     type SystemData = (Entities<'a>,
         ReadResource<'a, UIEventQueue>,
-        WriteResource<'a, SoundRequestQueue>,
         WriteResource<'a, NetworkRequestQueue>,
         WriteResource<'a, PersistRequestQueue>,
         WriteResource<'a, StateRes>,
@@ -142,17 +137,11 @@ impl<'a> System<'a> for DebugUISys {
         WriteStorage<'a, TextUICom>,
         WriteStorage<'a, TextFieldUICom>);
 
-    fn run(&mut self, (entities, ui_events, mut sound_requests, mut net_requests, mut persist_requests, mut state, input_events, mut debug_ui_markers, mut constraints, mut v_group_start_markers, mut group_end_markers, mut ui_buttons, mut ui_text_labels, mut ui_text_fields): Self::SystemData) {
+    fn run(&mut self, (entities, ui_events, mut net_requests, mut persist_requests, mut state, input_events, mut debug_ui_markers, mut constraints, mut v_group_start_markers, mut group_end_markers, mut ui_buttons, mut ui_text_labels, mut ui_text_fields): Self::SystemData) {
         for event in ui_events.iter() {
             match event {
                 UIEvent::ButtonPressed { id } => match id.as_str() {
-                    "sound" => {
-                        sound_requests.push(SoundRequest::ChangeMusic(self.music, self.layer));
-                        self.layer += 1;
-                        if self.layer > 3 {
-                            self.layer = 0;
-                        }
-                    },
+                    "sound" => (),
                     "connect" => {
                         net_requests.push(NetworkRequest::Open);
                         net_requests.push(NetworkRequest::Connect(("127.0.0.1", 0).to_socket_addrs().unwrap().next().unwrap()));
@@ -252,11 +241,9 @@ impl<'a> System<'a> for DebugUISys {
 }
 
 impl DebugUISys {
-    pub fn new(sound: &mut SoundImp) -> Self {
+    pub fn new() -> Self {
         Self {
             active: false,
-            layer: 0,
-            music: sound.load_music(&["assets/placeholder/music/you-are-my-hope.ogg", "assets/placeholder/music/windward.ogg", "assets/placeholder/music/baby-bird.ogg", "assets/placeholder/music/loves-vagrant.ogg"]),
             file: "save".to_string()
         }
     }

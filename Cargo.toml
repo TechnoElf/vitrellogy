@@ -5,7 +5,7 @@ authors = ["TechnoElf <jhjavadev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-invader = { path = "../invader/", version = "0.1.0" }
+invader = { git = "https://github.com/technoelf/invader" }
 
 sdl2 = { version = "0.34.2", default-features = false, features = ["image", "ttf", "mixer"] }
 
