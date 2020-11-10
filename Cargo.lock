@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "invader"
 version = "0.1.0"
-source = "git+https://github.com/technoelf/invader#bf67e8cd8ba1e9e82ee0a1f3b79a139665a03ab0"
+source = "git+https://github.com/technoelf/invader#99c656dadc8708ebaa84b5108c8eca62a58b39a1"
 dependencies = [
  "bincode",
  "invader-macro",
@@ -283,7 +283,7 @@ dependencies = [
 [[package]]
 name = "invader-macro"
 version = "0.1.0"
-source = "git+https://github.com/technoelf/invader#bf67e8cd8ba1e9e82ee0a1f3b79a139665a03ab0"
+source = "git+https://github.com/technoelf/invader#99c656dadc8708ebaa84b5108c8eca62a58b39a1"
 dependencies = [
  "proc-macro2",
  "quote",

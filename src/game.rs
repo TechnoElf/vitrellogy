@@ -93,9 +93,9 @@ impl<'a> System<'a> for GameManagerSys {
 
         world.write_resource::<StateRes>().insert("game", GameState::Title);
         world.write_resource::<StateRes>().insert("title_anim", AnimationState::A);
-
+/*
         world.create_entity().with(ConstraintCom::new(PositionConstraint::Start, PositionConstraint::Start, SizeConstraint::Fill, SizeConstraint::Fill))
-            .with(StartVerticalGroupCom::new()).build();
+            .with(StartVerticalGroupCom::new("blank")).build();
 
         world.create_entity()
             .with(ConstraintCom::new(PositionConstraint::Center, PositionConstraint::StartPixelOffset(100), SizeConstraint::Pixels(450), SizeConstraint::Pixels(100)))
@@ -106,14 +106,15 @@ impl<'a> System<'a> for GameManagerSys {
             .with(EndGroupCom::new()).build();
 
         world.create_entity().with(ConstraintCom::new(PositionConstraint::Start, PositionConstraint::Start, SizeConstraint::Fill, SizeConstraint::Fill))
-            .with(StartVerticalGroupCom::new()).build();
-
+            .with(StartVerticalGroupCom::new("blank")).build();
+*/
         world.create_entity().with(ConstraintCom::new(PositionConstraint::Start, PositionConstraint::Start, SizeConstraint::Fill, SizeConstraint::Fill))
             .with(ButtonUICom::new("blank", "blank", "title_start"))
             .with(TitleUIMarker).build();
-
+/*
         world.create_entity().with(ConstraintCom::new(PositionConstraint::Start, PositionConstraint::Start, SizeConstraint::Fill, SizeConstraint::Fill))
             .with(EndGroupCom::new()).build();
+*/
     }
 }
 
@@ -176,59 +177,64 @@ impl<'a> System<'a> for DebugUISys {
                     self.active = false;
                 } else {
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(200), SizeConstraint::Proportion(1.0))).unwrap();
-                    v_group_start_markers.insert(e, StartVerticalGroupCom).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::Start, SizeConstraint::Pixels(240), SizeConstraint::Proportion(1.0))).unwrap();
+                    v_group_start_markers.insert(e, StartVerticalGroupCom::new("bg")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("r", "g", "connect")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Connect", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "connect")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Connect", "ui")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("g", "b", "host")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Host", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "host")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Host", "ui")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("b", "r", "debug")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Debug", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "debug")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Debug", "ui")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("r", "g", "sound")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Sound", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "sound")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Sound", "ui")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("g", "b", "quit")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Quit", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "quit")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Quit", "ui")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("b", "r", "load")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Load", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Save/Load", "ui_fg")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(120), SizeConstraint::Pixels(50))).unwrap();
-                    ui_buttons.insert(e, ButtonUICom::new("r", "g", "save")).unwrap();
-                    ui_text_labels.insert(e, TextUICom::new("Save", "caveat")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_text_fields.insert(e, TextFieldUICom::new("fg", "save", "ui", "file")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::StartPixelOffset(10), SizeConstraint::Pixels(200), SizeConstraint::Pixels(50))).unwrap();
-                    ui_text_fields.insert(e, TextFieldUICom::new("g", "save", "caveat", "file")).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "save")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Save", "ui")).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
                     let e = entities.create();
-                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(0), SizeConstraint::Pixels(200), SizeConstraint::Proportion(1.0))).unwrap();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::StartPixelOffset(10), PositionConstraint::StartPixelOffset(10), SizeConstraint::NegativePixels(20), SizeConstraint::Pixels(50))).unwrap();
+                    ui_buttons.insert(e, ButtonUICom::new("fg", "bg", "load")).unwrap();
+                    ui_text_labels.insert(e, TextUICom::new("Load", "ui")).unwrap();
+                    debug_ui_markers.insert(e, DebugUIMarker).unwrap();
+
+                    let e = entities.create();
+                    constraints.insert(e, ConstraintCom::new(PositionConstraint::Start, PositionConstraint::Start, SizeConstraint::Fill, SizeConstraint::Fill)).unwrap();
                     group_end_markers.insert(e, EndGroupCom).unwrap();
                     debug_ui_markers.insert(e, DebugUIMarker).unwrap();
 
